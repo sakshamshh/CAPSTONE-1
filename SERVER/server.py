@@ -252,9 +252,6 @@ async def traffic_light_ws(websocket: WebSocket) -> None:
 def health_check() -> dict:
     return {"status": "ok"}
 
-
-
-//maps 
 @app.get("/map")
 def map_page() -> HTMLResponse:
     html = """
