@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+venv
+ENV
+env
+*.sqlite3
+*.log
+.DS_Store
+node_modules

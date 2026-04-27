@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ambulance Live Sender</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, Arial, sans-serif;
+      background: #0c1426;
+      color: #f1f4ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #3243a8 0%, #0c1426 45%, #060a16 100%);
+    }
+
+    .page {
+      width: min(100%, 440px);
+      padding: 1.2rem;
+    }
+
+    .card {
+      background: rgba(19, 27, 52, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      box-shadow: 0 18px 70px rgba(0, 0, 0, 0.35);
+      padding: 1.4rem;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(18px);
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      font-weight: 700;
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      letter-spacing: -0.03em;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.9rem;
+      color: #9aa3c3;
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .field strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: #aab2d7;
+      font-size: 0.95rem;
+    }
+
+    .value {
+      display: block;
+      color: #edf2ff;
+      font-size: 0.96rem;
+      min-height: 1.35rem;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 14px;
+      padding: 0.95rem 1.2rem;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease;
+      min-width: 120px;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, #5f7bf5, #2b54d8);
+      color: white;
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e3e9ff;
+    }
+
+    button:disabled {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.55);
+      cursor: not-allowed;
+    }
+
+    #log {
+      min-height: 140px;
+      max-height: 220px;
+      overflow-y: auto;
+      background: rgba(7, 10, 24, 0.95);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 1rem;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: #dbe1ff;
+      white-space: pre-wrap;
+    }
+
+    .meta {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <h1>Ambulance Live Sender</h1>
+      <h2>Send your phone GPS directly to the server in real time.</h2>
+
+      <div class="field">
+        <strong>Server address</strong>
+        <input id="serverInput" type="text" placeholder="http://192.168.1.100:8000" />
+        <span class="hint">Leave empty to use the current page host.</span>
+      </div>
+
+      <div class="field">
+        <strong>Target endpoint</strong>
+        <span class="value" id="targetEndpoint"></span>
+      </div>
+
+      <div class="field meta">
+        <div>
+          <strong>Connection state</strong>
+          <span class="value status-pill" id="status">Ready</span>
+        </div>
+        <div>
+          <strong>Current position</strong>
+          <span class="value" id="position">Not tracked yet</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <strong>Last server response</strong>
+        <span class="value" id="response">None</span>
+      </div>
+
+      <div class="row">
+        <button id="startButton" class="primary">Start live updates</button>
+        <button id="sendOnceButton" class="secondary">Send once</button>
+        <button id="stopButton" class="secondary" disabled>Stop</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Activity log</h2>
+      <div id="log">Waiting for actions...</div>
+    </div>
+  </div>
+
+  <script>
+    const serverHost = location.origin;
+    const serverInput = document.getElementById('serverInput');
+    const targetEndpoint = document.getElementById('targetEndpoint');
+    const statusEl = document.getElementById('status');
+    const positionEl = document.getElementById('position');
+    const responseEl = document.getElementById('response');
+    const logEl = document.getElementById('log');
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const sendOnceButton = document.getElementById('sendOnceButton');
+
+    function normalizeServerUrl(value) {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return serverHost;
+      }
+      if (/^https?:\/\//i.test(trimmed)) {
+        return trimmed.replace(/\/+$/, '');
+      }
+      return `http://${trimmed.replace(/\/+$/, '')}`;
+    }
+
+    function updateEndpoint() {
+      const url = normalizeServerUrl(serverInput.value);
+      targetEndpoint.textContent = `${url}/ambulance`;
+      return `${url}/ambulance`;
+    }
+
+    serverInput.value = serverHost;
+    targetEndpoint.textContent = `${serverHost}/ambulance`;
+
+    let watchId = null;
+    let sending = false;
+
+    function log(message) {
+      const now = new Date().toLocaleTimeString();
+      logEl.textContent = `${now} — ${message}\n` + logEl.textContent;
+    }
+
+    function updateStatus(text, color = '#edf2ff') {
+      statusEl.textContent = text;
+      statusEl.style.color = color;
+      statusEl.style.background = color === '#edf2ff' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.12)';
+    }
+
+    async function sendLocation(coords) {
+      const payload = {
+        id: 'ambulance-1',
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        timestamp: new Date().toISOString(),
+      };
+
+      const url = updateEndpoint();
+      updateStatus('Sending...', '#ffe58f');
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || response.statusText || 'Server error');
+        responseEl.textContent = JSON.stringify(data);
+        updateStatus(`sent ${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`, '#7fd1b9');
+        log(`Sent ${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)} → ${data.status}`);
+      } catch (error) {
+        responseEl.textContent = `Error: ${error.message}`;
+        updateStatus('Send failed', '#ff6b6b');
+        log(`Send failed: ${error.message}`);
+      }
+    }
+
+    function handleLocation(position) {
+      const coords = position.coords;
+      positionEl.textContent = `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
+      sendLocation(coords);
+    }
+
+    function startTracking() {
+      if (sending) return;
+      if (!navigator.geolocation) {
+        updateStatus('Geolocation unsupported', '#ff6b6b');
+        log('Browser does not support geolocation.');
+        return;
+      }
+
+      updateEndpoint();
+      watchId = navigator.geolocation.watchPosition(
+        handleLocation,
+        error => {
+          updateStatus('Location unavailable', '#ff6b6b');
+          log(`Geolocation error: ${error.message}`);
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
+      );
+
+      sending = true;
+      startButton.disabled = true;
+      stopButton.disabled = false;
+      updateStatus('Tracking started', '#7fd1b9');
+      log('Live tracking started.');
+    }
+
+    function stopTracking() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      sending = false;
+      startButton.disabled = false;
+      stopButton.disabled = true;
+      updateStatus('Tracking stopped', '#cbd5ff');
+      log('Live tracking stopped.');
+    }
+
+    function sendOnce() {
+      if (!navigator.geolocation) {
+        updateStatus('Geolocation unsupported', '#ff6b6b');
+        log('Browser does not support geolocation.');
+        return;
+      }
+
+      updateEndpoint();
+      navigator.geolocation.getCurrentPosition(
+        handleLocation,
+        error => {
+          updateStatus('Location unavailable', '#ff6b6b');
+          log(`Geolocation error: ${error.message}`);
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    }
+
+    serverInput.addEventListener('input', updateEndpoint);
+    startButton.addEventListener('click', startTracking);
+    stopButton.addEventListener('click', stopTracking);
+    sendOnceButton.addEventListener('click', sendOnce);
+  </script>
+</body>
+</html>
