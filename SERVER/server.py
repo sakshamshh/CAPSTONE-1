@@ -251,6 +251,10 @@ async def traffic_light_ws(websocket: WebSocket) -> None:
 @app.get("/health")
 def health_check() -> dict:
     return {"status": "ok"}
+
+
+
+//maps 
 @app.get("/map")
 def map_page() -> HTMLResponse:
     html = """
@@ -258,98 +262,65 @@ def map_page() -> HTMLResponse:
 <html>
 <head>
   <title>Ambulance Map</title>
-  <style>body{margin:0;} #map{height:100vh;width:100%;}</style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"/>
+  <style>body{margin:0;}#map{height:100vh;width:100%;}</style>
 </head>
 <body>
   <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
   <script>
-    var map, ambulanceMarker, lightMarker, radiusCircle, directionsRenderer;
-    var trafficLight = {lat: 30.356472, lng: 76.371972};
-    var ws;
+    var trafficLight = [30.356472, 76.371972];
 
-    function initMap() {
-      map = new google.maps.Map(document.getElementById('map'), {
-        center: trafficLight,
-        zoom: 18
+    var map = L.map('map').setView(trafficLight, 18);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    var lightMarker = L.marker(trafficLight, {draggable: true, title: 'Traffic Light'})
+      .addTo(map).bindPopup('Traffic Light').openPopup();
+
+    var radiusCircle = L.circle(trafficLight, {
+      radius: 50, color: 'green', fillColor: 'green', fillOpacity: 0.15
+    }).addTo(map);
+
+    var ambulanceMarker = L.marker(trafficLight, {title: 'Ambulance'}).addTo(map);
+
+    var routingControl = L.Routing.control({
+      waypoints: [L.latLng(trafficLight), L.latLng(trafficLight)],
+      routeWhileDragging: false,
+      show: false,
+      addWaypoints: false
+    }).addTo(map);
+
+    lightMarker.on('dragend', function(e) {
+      var pos = e.target.getLatLng();
+      trafficLight = [pos.lat, pos.lng];
+      radiusCircle.setLatLng(trafficLight);
+      fetch('/set-traffic-light', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({latitude: pos.lat, longitude: pos.lng})
       });
-
-      directionsRenderer = new google.maps.DirectionsRenderer({suppressMarkers: true});
-      directionsRenderer.setMap(map);
-
-      lightMarker = new google.maps.Marker({
-        position: trafficLight,
-        map: map,
-        title: 'Traffic Light',
-        icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
-        draggable: true
-      });
-
-      radiusCircle = new google.maps.Circle({
-        map: map,
-        center: trafficLight,
-        radius: 50,
-        fillColor: '#00FF00',
-        fillOpacity: 0.15,
-        strokeColor: '#00FF00',
-        strokeWeight: 2
-      });
-
-      lightMarker.addListener('dragend', function(e) {
-        trafficLight = {lat: e.latLng.lat(), lng: e.latLng.lng()};
-        radiusCircle.setCenter(trafficLight);
-        fetch('/set-traffic-light', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({latitude: trafficLight.lat, longitude: trafficLight.lng})
-        });
-      });
-
-      ambulanceMarker = new google.maps.Marker({
-        position: trafficLight,
-        map: map,
-        title: 'Ambulance',
-        icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-      });
-
-      connectWS();
-    }
+    });
 
     function connectWS() {
-      ws = new WebSocket('wss://' + location.host + '/ws/traffic-light');
+      var ws = new WebSocket('wss://' + location.host + '/ws/traffic-light');
       ws.onmessage = function(e) {
         var data = JSON.parse(e.data);
         if (!data.ambulance) return;
-        var pos = {lat: data.ambulance.latitude, lng: data.ambulance.longitude};
-        ambulanceMarker.setPosition(pos);
+        var pos = [data.ambulance.latitude, data.ambulance.longitude];
+        ambulanceMarker.setLatLng(pos);
         map.panTo(pos);
-
-        var directionsService = new google.maps.DirectionsService();
-        directionsService.route({
-          origin: pos,
-          destination: trafficLight,
-          travelMode: google.maps.TravelMode.DRIVING
-        }, function(result, status) {
-          if (status === 'OK') directionsRenderer.setDirections(result);
-        });
-
-        radiusCircle.setOptions({
-          fillColor: data.status === 'triggered' ? '#FF0000' : '#00FF00',
-          strokeColor: data.status === 'triggered' ? '#FF0000' : '#00FF00'
-        });
+        routingControl.setWaypoints([L.latLng(pos), L.latLng(trafficLight)]);
+        var color = data.status === 'triggered' ? 'red' : 'green';
+        radiusCircle.setStyle({color: color, fillColor: color});
       };
       ws.onclose = function() { setTimeout(connectWS, 2000); };
     }
+
+    connectWS();
   </script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDi_B_irvLghvhXqKj62UxuXRAHrt3cjcE&callback=initMap" async defer></script>
 </body>
 </html>
 """
     return HTMLResponse(content=html)
-
-
-@app.post("/set-traffic-light")
-async def set_traffic_light(location: AmbulanceLocation) -> JSONResponse:
-    global TRAFFIC_LIGHT_LOCATION
-    TRAFFIC_LIGHT_LOCATION["latitude"] = location.latitude
-    TRAFFIC_LIGHT_LOCATION["longitude"] = location.longitude
-    return JSONResponse(content={"status": "updated", "location": TRAFFIC_LIGHT_LOCATION})
