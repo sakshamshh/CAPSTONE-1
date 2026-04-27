@@ -10,14 +10,15 @@ import requests
 
 
 DEFAULT_PATH: List[Dict[str, float]] = [
-    {"latitude": 40.7123, "longitude": -74.0065},
-    {"latitude": 40.7125, "longitude": -74.0064},
-    {"latitude": 40.7127, "longitude": -74.0062},
-    {"latitude": 40.7129, "longitude": -74.0061},
-    {"latitude": 40.7131, "longitude": -74.0060},
-    {"latitude": 40.7133, "longitude": -74.0058},
+    {"latitude": 30.356100, "longitude": 76.371500},
+    {"latitude": 30.356150, "longitude": 76.371600},
+    {"latitude": 30.356220, "longitude": 76.371700},
+    {"latitude": 30.356300, "longitude": 76.371800},
+    {"latitude": 30.356380, "longitude": 76.371870},
+    {"latitude": 30.356420, "longitude": 76.371920},
+    {"latitude": 30.356460, "longitude": 76.371950},
+    {"latitude": 30.356472, "longitude": 76.371972},
 ]
-
 
 def discover_server(timeout: float = 3.0) -> Optional[str]:
     try:
