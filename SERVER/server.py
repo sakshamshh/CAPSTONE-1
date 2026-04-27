@@ -321,3 +321,151 @@ def map_page() -> HTMLResponse:
 </html>
 """
     return HTMLResponse(content=html)
+
+@app.get("/navigate")
+def navigate_page() -> HTMLResponse:
+    html = """
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ambulance Navigation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #0a1224; color: #fff; display: flex; flex-direction: column; height: 100vh; }
+    #topbar { background: #121b36; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
+    #topbar h2 { font-size: 16px; color: #6fc5ff; }
+    #status { font-size: 13px; color: #a8b0d0; }
+    #distance { font-size: 22px; font-weight: bold; color: #fff; }
+    #btnRow { display: flex; gap: 8px; }
+    button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    #btnStart { background: #2ecc71; color: #fff; }
+    #btnStop { background: #e74c3c; color: #fff; }
+    #btnForce { background: #f39c12; color: #fff; }
+    #map { flex: 1; }
+    #triggerAlert { display: none; position: fixed; top: 0; left: 0; right: 0; background: #e74c3c; color: #fff; text-align: center; padding: 14px; font-size: 18px; font-weight: bold; z-index: 9999; }
+  </style>
+</head>
+<body>
+  <div id="triggerAlert">🚨 TRAFFIC LIGHT TRIGGERED 🚨</div>
+  <div id="topbar">
+    <h2>🚑 Ambulance Navigation</h2>
+    <div id="status">Waiting for GPS...</div>
+    <div id="distance">— m to traffic light</div>
+    <div id="btnRow">
+      <button id="btnStart" onclick="startNav()">Start</button>
+      <button id="btnStop" onclick="stopNav()">Stop</button>
+      <button id="btnForce" onclick="forceTriger()">Force Trigger</button>
+    </div>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+  <script>
+    var trafficLight = [30.356472, 76.371972];
+    var myPos = null;
+    var watchId = null;
+    var sendInterval = null;
+    var triggered = false;
+
+    var map = L.map('map').setView(trafficLight, 18);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    var lightMarker = L.marker(trafficLight, {draggable: true})
+      .addTo(map).bindPopup('Traffic Light 🚦').openPopup();
+
+    var radiusCircle = L.circle(trafficLight, {
+      radius: 50, color: 'green', fillColor: 'green', fillOpacity: 0.2
+    }).addTo(map);
+
+    var ambulanceIcon = L.divIcon({html: '🚑', className: '', iconSize: [30,30]});
+    var ambulanceMarker = null;
+
+    var routingControl = L.Routing.control({
+      waypoints: [],
+      routeWhileDragging: false,
+      show: true,
+      addWaypoints: false,
+      router: L.Routing.osrmv1({serviceUrl: 'https://router.project-osrm.org/route/v1'})
+    }).addTo(map);
+
+    lightMarker.on('dragend', function(e) {
+      var pos = e.target.getLatLng();
+      trafficLight = [pos.lat, pos.lng];
+      radiusCircle.setLatLng(trafficLight);
+      fetch('/set-traffic-light', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({latitude: pos.lat, longitude: pos.lng})
+      });
+      if (myPos) updateRoute();
+    });
+
+    function updateRoute() {
+      routingControl.setWaypoints([
+        L.latLng(myPos[0], myPos[1]),
+        L.latLng(trafficLight[0], trafficLight[1])
+      ]);
+    }
+
+    function startNav() {
+      document.getElementById('status').innerText = 'Getting GPS...';
+      watchId = navigator.geolocation.watchPosition(function(pos) {
+        myPos = [pos.coords.latitude, pos.coords.longitude];
+        document.getElementById('status').innerText = 'Navigating...';
+        if (!ambulanceMarker) {
+          ambulanceMarker = L.marker(myPos, {icon: ambulanceIcon}).addTo(map);
+        } else {
+          ambulanceMarker.setLatLng(myPos);
+        }
+        map.panTo(myPos);
+        updateRoute();
+      }, function(err) {
+        document.getElementById('status').innerText = 'GPS error: ' + err.message;
+      }, {enableHighAccuracy: true, maximumAge: 2000});
+
+      sendInterval = setInterval(function() {
+        if (!myPos) return;
+        fetch('/ambulance', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({latitude: myPos[0], longitude: myPos[1], id: 'ambulance-phone'})
+        }).then(r => r.json()).then(function(data) {
+          document.getElementById('distance').innerText = data.distance_meters + ' m to traffic light';
+          if (data.status === 'triggered' && !triggered) {
+            triggered = true;
+            document.getElementById('triggerAlert').style.display = 'block';
+            radiusCircle.setStyle({color: 'red', fillColor: 'red'});
+            setTimeout(function() {
+              document.getElementById('triggerAlert').style.display = 'none';
+              triggered = false;
+            }, 4000);
+          } else if (data.status === 'clear') {
+            radiusCircle.setStyle({color: 'green', fillColor: 'green'});
+          }
+        });
+      }, 2000);
+    }
+
+    function stopNav() {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (sendInterval) clearInterval(sendInterval);
+      document.getElementById('status').innerText = 'Stopped.';
+    }
+
+    function forceTriger() {
+      fetch('/ambulance', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({latitude: trafficLight[0], longitude: trafficLight[1], id: 'force-trigger'})
+      });
+      document.getElementById('status').innerText = 'Force triggered!';
+    }
+  </script>
+</body>
+</html>
+"""
+    return HTMLResponse(content=html)
