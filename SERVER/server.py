@@ -28,11 +28,10 @@ app.add_middleware(
 
 # Configure the traffic-light location and triggering radius here.
 TRAFFIC_LIGHT_LOCATION = {
-    "latitude": 40.7128,
-    "longitude": -74.0060,
+    "latitude": 30.356472,
+    "longitude": 76.371972,
 }
-TRIGGER_RADIUS_METERS = 200.0
-
+TRIGGER_RADIUS_METERS = 50.0
 last_ambulance_update: Optional[Dict[str, object]] = None
 last_broadcast: Optional[Dict[str, object]] = None
 

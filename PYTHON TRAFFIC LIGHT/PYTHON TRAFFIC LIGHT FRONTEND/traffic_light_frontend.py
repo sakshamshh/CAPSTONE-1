@@ -5,6 +5,7 @@ import time
 import tkinter as tk
 from tkinter import ttk
 from typing import Optional
+from xmlrpc import server
 
 import websocket
 
@@ -16,7 +17,7 @@ class TrafficLightApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Traffic Light Client")
-        self.root.geometry("360x540")
+        self.root.state("zoomed")
         self.root.resizable(False, False)
         self.root.configure(bg="#1f2330")
 
@@ -165,8 +166,7 @@ class TrafficLightApp:
                     time.sleep(3)
                     continue
 
-            url = f"ws://{server}/ws/traffic-light"
-
+            url = f"wss://{server}/ws/traffic-light" if "onrender.com" in server else f"ws://{server}/ws/traffic-light"
             def on_open(ws: websocket.WebSocketApp) -> None:
                 self.root.after(0, lambda: self.status.set("connected"))
 
@@ -176,7 +176,9 @@ class TrafficLightApp:
                     state = payload.get("status", "clear")
                     distance = payload.get('distance_meters', '?')
                     self.root.after(0, lambda: self.status.set(f"{state} ({distance}m)"))
-                    self.root.after(0, lambda: self.distance_text.set(f"{distance} m"))
+                    amb = payload.get("ambulance", {})
+                    amb_info = f"{distance} m  |  lat {amb.get('latitude','?')}  lon {amb.get('longitude','?')}  id {amb.get('id','?')}"
+                    self.root.after(0, lambda i=amb_info: self.distance_text.set(i))
                     self.root.after(0, lambda: self.last_update.set(json.dumps(payload)))
                     self.root.after(0, lambda: self.set_traffic_light(state))
                 except json.JSONDecodeError:
