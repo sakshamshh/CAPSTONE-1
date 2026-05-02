@@ -318,6 +318,9 @@ def navigate_page():
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
 
 
+def map_page():
+    html_path = Path(__file__).resolve().parent / "map.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
 
 
 @app.get("/hq")

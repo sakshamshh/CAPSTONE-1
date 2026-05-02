@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ambulance Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"/>
+  <style>body{margin:0;}#map{height:100vh;width:100%;}</style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script>
+    var MAPTILER_KEY = 'oeqoZ7jmF643lIa3lxQ3';
+    var map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://api.maptiler.com/maps/dataviz-dark/style.json?key=' + MAPTILER_KEY,
+      center: [76.371972, 30.356472],
+      zoom: 17
+    });
+    var tlMarkers = {};
+    var ambMarkers = {};
+
+    function loadLights() {
+      fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
+        lights.forEach(function(tl) {
+          if (!tlMarkers[tl.id]) {
+            var el = document.createElement('div');
+            el.innerText = '🚦';
+            el.style.fontSize = '24px';
+            tlMarkers[tl.id] = new maplibregl.Marker({element: el}).setLngLat([tl.longitude, tl.latitude]).setPopup(new maplibregl.Popup().setText(tl.name)).addTo(map);
+          }
+        });
+      });
+    }
+
+    function connectWS() {
+      var ws = new WebSocket('wss://' + location.host + '/ws/traffic-light');
+      ws.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        if (!data.ambulance) return;
+        var pos = [data.ambulance.longitude, data.ambulance.latitude];
+        if (!ambMarkers[data.ambulance.id]) {
+          var el = document.createElement('div');
+          el.innerText = '🚑';
+          el.style.fontSize = '24px';
+          ambMarkers[data.ambulance.id] = new maplibregl.Marker({element: el}).setLngLat(pos).addTo(map);
+        } else {
+          ambMarkers[data.ambulance.id].setLngLat(pos);
+        }
+        map.easeTo({center: pos});
+      };
+      ws.onclose = function() { setTimeout(connectWS, 2000); };
+    }
+
+    loadLights();
+    connectWS();
+  </script>
+</body>
+</html>
