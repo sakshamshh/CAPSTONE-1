@@ -314,8 +314,8 @@ async def ambulance_ws(websocket: WebSocket, ambulance_id: str):
 
 @app.get("/navigate")
 def navigate_page():
-    html = """
-<!DOCTYPE html>
+    html_path = Path(__file__).resolve().parent / "navigate.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")<!DOCTYPE html>
 <html>
 <head>
   <title>Ambulance Dispatch</title>
@@ -710,8 +710,8 @@ def navigate_page():
 
 @app.get("/hq")
 def hq_page():
-    html = """
-<!DOCTYPE html>
+    html_path = Path(__file__).resolve().parent / "hq.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")<!DOCTYPE html>
 <html>
 <head>
   <title>HQ Dispatch Center</title>
