@@ -318,236 +318,390 @@ def navigate_page():
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ambulance Navigation</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <title>Ambulance Dispatch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #0a1224; color: #fff; display: flex; flex-direction: column; height: 100vh; }
-    #topbar { background: #121b36; padding: 10px 14px; z-index: 1000; }
-    #topbar h2 { font-size: 15px; color: #6fc5ff; margin-bottom: 6px; }
-    #status { font-size: 12px; color: #a8b0d0; }
-    #distance { font-size: 20px; font-weight: bold; margin: 4px 0; }
-    #btnRow { display: flex; gap: 6px; margin-top: 6px; }
-    button { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; }
-    #btnStart { background: #2ecc71; color: #fff; }
-    #btnStop { background: #e74c3c; color: #fff; }
-    #btnForce { background: #f39c12; color: #fff; }
-    #btnAdd { background: #3498db; color: #fff; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: #060d1a; color: #e8eaf6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    
+    #registerScreen { position: fixed; inset: 0; background: #060d1a; display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .reg-card { background: #0d1b2e; border: 1px solid #1e3a5f; border-radius: 20px; padding: 40px; width: 340px; text-align: center; }
+    .reg-card .logo { font-size: 48px; margin-bottom: 16px; }
+    .reg-card h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .reg-card p { font-size: 13px; color: #7b8fa6; margin-bottom: 24px; }
+    .reg-card input { width: 100%; padding: 12px 16px; background: #111f35; border: 1px solid #1e3a5f; border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 12px; outline: none; }
+    .reg-card input:focus { border-color: #3b82f6; }
+    .reg-card input::placeholder { color: #4a5f7a; }
+    .btn-primary { width: 100%; padding: 13px; background: #2563eb; border: none; border-radius: 10px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:hover { background: #1d4ed8; }
+    #regStatus { font-size: 13px; color: #7b8fa6; margin-top: 14px; min-height: 20px; }
+
+    #pendingScreen { position: fixed; inset: 0; background: #060d1a; display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .pending-card { background: #0d1b2e; border: 1px solid #1e3a5f; border-radius: 20px; padding: 40px; width: 340px; text-align: center; }
+    .pending-card .spinner { width: 48px; height: 48px; border: 3px solid #1e3a5f; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pending-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .pending-card p { font-size: 13px; color: #7b8fa6; }
+
+    #appScreen { display: none; flex-direction: column; height: 100vh; }
+    
+    #topbar { background: #0a1628; border-bottom: 1px solid #1a2f4e; padding: 0 16px; height: 60px; display: flex; align-items: center; gap: 12px; z-index: 100; flex-shrink: 0; }
+    #topbar .amb-id { background: #1a2f4e; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #60a5fa; letter-spacing: 0.5px; }
+    #topbar .phase-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+    .phase-idle { background: #1a2f4e; color: #7b8fa6; }
+    .phase-patient { background: #1c3a1c; color: #4ade80; }
+    .phase-hospital { background: #3a1c1c; color: #f87171; }
+    #topbar .spacer { flex: 1; }
+    #topbar .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    #infobar { background: #0a1628; border-bottom: 1px solid #1a2f4e; padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #distanceDisplay { font-size: 24px; font-weight: 700; color: #fff; }
+    #distanceLabel { font-size: 12px; color: #7b8fa6; margin-top: 2px; }
+    #infobar .spacer { flex: 1; }
+    #triggerBadge { display: none; background: #dc2626; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; animation: blink 0.5s infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
     #map { flex: 1; }
-    #panel { position: fixed; right: 0; top: 0; bottom: 0; width: 240px; background: #121b36; padding: 12px; overflow-y: auto; z-index: 2000; transform: translateX(100%); transition: transform 0.3s; }
+
+    #bottombar { background: #0a1628; border-top: 1px solid #1a2f4e; padding: 12px 16px; display: flex; gap: 8px; flex-shrink: 0; }
+    .btn { flex: 1; padding: 12px 8px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-start { background: #166534; color: #4ade80; border: 1px solid #166534; }
+    .btn-start:hover:not(:disabled) { background: #14532d; }
+    .btn-stop { background: #7f1d1d; color: #f87171; border: 1px solid #7f1d1d; }
+    .btn-force { background: #78350f; color: #fbbf24; border: 1px solid #78350f; }
+    .btn-lights { background: #1e3a5f; color: #60a5fa; border: 1px solid #1e3a5f; }
+    .btn-pickup { background: #4c1d95; color: #c4b5fd; border: 1px solid #4c1d95; }
+
+    #dispatchOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9000; align-items: center; justify-content: center; }
+    #dispatchOverlay.show { display: flex; }
+    .dispatch-card { background: #0d1b2e; border: 1px solid #dc2626; border-radius: 20px; padding: 28px; width: 320px; }
+    .dispatch-card .dispatch-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .dispatch-card .dispatch-icon { font-size: 28px; }
+    .dispatch-card h2 { font-size: 18px; font-weight: 700; color: #f87171; }
+    .dispatch-info { background: #111f35; border-radius: 10px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: #cbd5e1; line-height: 1.8; }
+    .dispatch-info strong { color: #fff; }
+    .btn-accept { width: 100%; padding: 14px; background: #166534; border: none; border-radius: 10px; color: #4ade80; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+    #panel { position: fixed; right: 0; top: 0; bottom: 0; width: 280px; background: #0a1628; border-left: 1px solid #1a2f4e; padding: 16px; overflow-y: auto; z-index: 2000; transform: translateX(100%); transition: transform 0.3s; }
     #panel.open { transform: translateX(0); }
-    #panel h3 { color: #6fc5ff; margin-bottom: 10px; font-size: 14px; }
-    .tl-item { background: #1e2a4a; border-radius: 8px; padding: 8px; margin-bottom: 8px; font-size: 13px; }
-    .tl-item span { display: block; color: #fff; font-weight: bold; }
-    .tl-item small { color: #a8b0d0; }
-    .tl-delete { background: #e74c3c; color: #fff; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; float: right; font-size: 11px; margin-top: 4px; }
-    #closePanel { background: #2f3450; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; margin-bottom: 10px; width: 100%; }
-    #addForm { margin-top: 10px; }
-    #addForm input { width: 100%; padding: 6px; border-radius: 6px; border: none; background: #2f3450; color: #fff; margin-bottom: 6px; font-size: 13px; }
-    #addForm button { width: 100%; background: #2ecc71; color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; }
-    #triggerAlert { display: none; position: fixed; top: 0; left: 0; right: 0; background: #e74c3c; color: #fff; text-align: center; padding: 14px; font-size: 18px; font-weight: bold; z-index: 9999; }
-    #mapInstruct { display: none; position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #f39c12; color: #000; padding: 10px 18px; border-radius: 20px; font-weight: bold; font-size: 13px; z-index: 3000; }
-    #dispatchAlert { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 9998; align-items: center; justify-content: center; flex-direction: column; }
-    #dispatchAlert.show { display: flex; }
-    #dispatchBox { background: #121b36; border-radius: 16px; padding: 24px; text-align: center; max-width: 300px; }
-    #dispatchBox h2 { color: #e74c3c; margin-bottom: 10px; }
-    #dispatchBox p { color: #fff; margin-bottom: 16px; font-size: 14px; }
-    #btnAccept { background: #2ecc71; color: #fff; border: none; border-radius: 10px; padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; }
+    #panel h3 { font-size: 14px; font-weight: 600; color: #60a5fa; margin-bottom: 12px; }
+    .tl-card { background: #0d1b2e; border: 1px solid #1a2f4e; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .tl-card .tl-icon { font-size: 20px; }
+    .tl-card .tl-info { flex: 1; }
+    .tl-card .tl-name { font-size: 13px; font-weight: 600; }
+    .tl-card .tl-coords { font-size: 11px; color: #7b8fa6; margin-top: 2px; }
+    .tl-del { background: #7f1d1d; border: none; border-radius: 6px; color: #f87171; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+    #panel input { width: 100%; padding: 10px 12px; background: #111f35; border: 1px solid #1a2f4e; border-radius: 8px; color: #fff; font-size: 13px; margin-bottom: 8px; outline: none; }
+    #panel input:focus { border-color: #3b82f6; }
+    .btn-pin { width: 100%; padding: 10px; background: #1e3a5f; border: none; border-radius: 8px; color: #60a5fa; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+    .btn-close-panel { width: 100%; padding: 8px; background: transparent; border: 1px solid #1a2f4e; border-radius: 8px; color: #7b8fa6; font-size: 13px; cursor: pointer; margin-bottom: 16px; }
+
+    #mapInstruct { display: none; position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: #000; padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 13px; z-index: 3000; }
   </style>
 </head>
 <body>
-  <div id="triggerAlert">TRAFFIC LIGHT TRIGGERED</div>
-  <div id="mapInstruct">Tap on map to place traffic light</div>
-  <div id="dispatchAlert">
-    <div id="dispatchBox">
-      <h2>EMERGENCY DISPATCH</h2>
-      <p id="dispatchInfo">Patient location received.</p>
-      <button id="btnAccept" onclick="acceptDispatch()">Accept & Navigate</button>
-    </div>
+
+<div id="registerScreen">
+  <div class="reg-card">
+    <div class="logo">🚑</div>
+    <h1>Ambulance Driver</h1>
+    <p>Register to receive emergency dispatches</p>
+    <input id="driverName" placeholder="Your full name" />
+    <input id="driverVehicle" placeholder="Vehicle number (e.g. PB-11-1234)" />
+    <button class="btn-primary" onclick="register()">Request Access</button>
+    <div id="regStatus"></div>
   </div>
+</div>
+
+<div id="pendingScreen">
+  <div class="pending-card">
+    <div class="spinner"></div>
+    <h2>Awaiting Approval</h2>
+    <p>Your request has been sent to HQ. Please wait for approval.</p>
+  </div>
+</div>
+
+<div id="appScreen">
   <div id="topbar">
-    <h2>Ambulance Navigation</h2>
-    <div id="status">Waiting for GPS...</div>
-    <div id="distance">— m to nearest light</div>
-    <div id="btnRow">
-      <button id="btnStart" onclick="startNav()">Start</button>
-      <button id="btnStop" onclick="stopNav()">Stop</button>
-      <button id="btnForce" onclick="forceTrigger()">Force</button>
-      <button id="btnAdd" onclick="openPanel()">Lights</button>
+    <span class="amb-id" id="ambIdBadge">AMB</span>
+    <span class="phase-badge phase-idle" id="phaseBadge">STANDBY</span>
+    <div class="spacer"></div>
+    <div class="status-dot"></div>
+  </div>
+  <div id="infobar">
+    <div>
+      <div id="distanceDisplay">— m</div>
+      <div id="distanceLabel">to nearest traffic light</div>
     </div>
+    <div class="spacer"></div>
+    <div id="triggerBadge">🚨 TRIGGERED</div>
   </div>
   <div id="map"></div>
-  <div id="panel">
-    <button id="closePanel" onclick="closePanel()">Close</button>
-    <h3>Traffic Lights</h3>
-    <div id="tlList"></div>
-    <div id="addForm">
-      <input id="tlName" placeholder="Light name"/>
-      <button onclick="startPinMode()">Pin on Map</button>
-    </div>
+  <div id="bottombar">
+    <button class="btn btn-start" id="btnStart" onclick="startNav()">▶ Start</button>
+    <button class="btn btn-stop" id="btnStop" onclick="stopNav()" disabled>■ Stop</button>
+    <button class="btn btn-force" onclick="forceTrigger()">⚡ Force</button>
+    <button class="btn btn-lights" onclick="openPanel()">🚦 Lights</button>
   </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-  <script>
-    var ambulanceId = new URLSearchParams(location.search).get('id') || 'amb-1';
-    var myPos = null;
-    var watchId = null;
-    var sendInterval = null;
-    var triggered = false;
-    var pinMode = false;
-    var tlMarkers = {};
-    var tlCircles = {};
-    var nearestTL = null;
-    var currentEmergency = null;
-    var phase = 'idle';
+</div>
 
-    var map = L.map('map').setView([30.356472, 76.371972], 18);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    var ambulanceIcon = L.divIcon({html: '🚑', className: '', iconSize: [30,30]});
-    var lightIcon = L.divIcon({html: '🚦', className: '', iconSize: [30,30]});
-    var patientIcon = L.divIcon({html: '🏥', className: '', iconSize: [30,30]});
-    var ambulanceMarker = null;
-    var patientMarker = null;
-    var routingControl = L.Routing.control({waypoints: [], show: true, addWaypoints: false, router: L.Routing.osrmv1({serviceUrl: 'https://router.project-osrm.org/route/v1'})}).addTo(map);
+<div id="dispatchOverlay">
+  <div class="dispatch-card">
+    <div class="dispatch-header">
+      <span class="dispatch-icon">🚨</span>
+      <h2>EMERGENCY DISPATCH</h2>
+    </div>
+    <div class="dispatch-info" id="dispatchInfo"></div>
+    <button class="btn-accept" onclick="acceptDispatch()">✓ Accept & Navigate</button>
+  </div>
+</div>
 
-    var ws = new WebSocket('wss://' + location.host + '/ws/ambulance/' + ambulanceId);
+<div id="panel">
+  <button class="btn-close-panel" onclick="closePanel()">✕ Close</button>
+  <h3>🚦 Traffic Lights</h3>
+  <div id="tlList"></div>
+  <input id="tlName" placeholder="Light name (e.g. Gate 2)" />
+  <button class="btn-pin" onclick="startPinMode()">📍 Tap Map to Place</button>
+</div>
+
+<div id="mapInstruct">📍 Tap map to place traffic light</div>
+
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<script>
+  var MAPTILER_KEY = 'oeqoZ7jmF643lIa3lxQ3';
+  var ambulanceId = null;
+  var myPos = null;
+  var watchId = null;
+  var sendInterval = null;
+  var triggered = false;
+  var pinMode = false;
+  var tlMarkers = {};
+  var tlCircles = {};
+  var nearestTL = null;
+  var currentEmergency = null;
+  var phase = 'idle';
+  var ws = null;
+  var map = null;
+  var ambulanceMarker = null;
+  var destinationMarker = null;
+
+  function register() {
+    var name = document.getElementById('driverName').value.trim();
+    var vehicle = document.getElementById('driverVehicle').value.trim();
+    if (!name || !vehicle) { document.getElementById('regStatus').innerText = 'Please fill in all fields'; return; }
+    document.getElementById('regStatus').innerText = 'Sending request...';
+    fetch('/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({driver_name: name, vehicle: vehicle})
+    }).then(r => r.json()).then(function(data) {
+      if (data.id) {
+        ambulanceId = data.id;
+        localStorage.setItem('ambulanceId', ambulanceId);
+        localStorage.setItem('ambulanceStatus', data.status);
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('pendingScreen').style.display = 'flex';
+        pollApproval();
+      }
+    }).catch(function() {
+      document.getElementById('regStatus').innerText = 'Connection error. Try again.';
+    });
+  }
+
+  function pollApproval() {
+    var interval = setInterval(function() {
+      fetch('/ambulances/' + ambulanceId).then(r => r.json()).then(function(data) {
+        if (data.status === 'approved' || data.status === 'idle') {
+          clearInterval(interval);
+          launchApp();
+        }
+      });
+    }, 3000);
+  }
+
+  function launchApp() {
+    document.getElementById('pendingScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display = 'flex';
+    document.getElementById('ambIdBadge').innerText = ambulanceId;
+    initMap();
+    connectWS();
+    loadLights();
+  }
+
+  function initMap() {
+    map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://api.maptiler.com/maps/dataviz-dark/style.json?key=' + MAPTILER_KEY,
+      center: [76.371972, 30.356472],
+      zoom: 16
+    });
+  }
+
+  function connectWS() {
+    ws = new WebSocket('wss://' + location.host + '/ws/ambulance/' + ambulanceId);
     ws.onmessage = function(e) {
       var data = JSON.parse(e.data);
       if (data.type === 'dispatch') {
         currentEmergency = data;
-        document.getElementById('dispatchInfo').innerText = 'Patient at ' + data.patient_latitude.toFixed(5) + ', ' + data.patient_longitude.toFixed(5) + ' | Hospital: ' + data.hospital.name;
-        document.getElementById('dispatchAlert').classList.add('show');
+        document.getElementById('dispatchInfo').innerHTML =
+          '<strong>Patient:</strong> ' + data.patient_latitude.toFixed(5) + ', ' + data.patient_longitude.toFixed(5) +
+          '<br><strong>Hospital:</strong> ' + data.hospital.name +
+          '<br><strong>Distance:</strong> Calculating...';
+        document.getElementById('dispatchOverlay').classList.add('show');
       }
     };
-    ws.onclose = function() { setTimeout(function() { location.reload(); }, 3000); };
+    ws.onclose = function() { setTimeout(connectWS, 3000); };
+  }
 
-    function acceptDispatch() {
-      document.getElementById('dispatchAlert').classList.remove('show');
-      phase = 'to_patient';
-      if (patientMarker) map.removeLayer(patientMarker);
-      patientMarker = L.marker([currentEmergency.patient_latitude, currentEmergency.patient_longitude], {icon: patientIcon}).addTo(map).bindPopup('Patient').openPopup();
-      if (myPos) {
-        routingControl.setWaypoints([L.latLng(myPos), L.latLng(currentEmergency.patient_latitude, currentEmergency.patient_longitude)]);
-      }
-      document.getElementById('status').innerText = 'Navigating to patient...';
-      addPickedUpButton();
-    }
+  function acceptDispatch() {
+    document.getElementById('dispatchOverlay').classList.remove('show');
+    phase = 'to_patient';
+    document.getElementById('phaseBadge').className = 'phase-badge phase-patient';
+    document.getElementById('phaseBadge').innerText = 'TO PATIENT';
+    document.getElementById('distanceLabel').innerText = 'to patient';
+    if (destinationMarker) destinationMarker.remove();
+    var el = document.createElement('div');
+    el.innerHTML = '📍';
+    el.style.fontSize = '28px';
+    destinationMarker = new maplibregl.Marker({element: el}).setLngLat([currentEmergency.patient_longitude, currentEmergency.patient_latitude]).addTo(map);
+    addPickupButton();
+  }
 
-    function addPickedUpButton() {
-      var btn = document.createElement('button');
-      btn.innerText = 'Picked Up';
-      btn.style.cssText = 'background:#9b59b6;color:#fff;border:none;border-radius:8px;padding:8px;font-weight:bold;cursor:pointer;flex:1;';
-      btn.onclick = patientPickedUp;
-      document.getElementById('btnRow').appendChild(btn);
-    }
+  function addPickupButton() {
+    var bar = document.getElementById('bottombar');
+    var btn = document.createElement('button');
+    btn.className = 'btn btn-pickup';
+    btn.id = 'btnPickup';
+    btn.innerText = '✓ Picked Up';
+    btn.onclick = patientPickedUp;
+    bar.appendChild(btn);
+  }
 
-    function patientPickedUp() {
-      phase = 'to_hospital';
-      fetch('/emergencies/' + currentEmergency.emergency_id + '/picked-up', {method: 'POST'});
-      if (patientMarker) map.removeLayer(patientMarker);
-      var h = currentEmergency.hospital;
-      patientMarker = L.marker([h.latitude, h.longitude], {icon: patientIcon}).addTo(map).bindPopup(h.name).openPopup();
-      if (myPos) {
-        routingControl.setWaypoints([L.latLng(myPos), L.latLng(h.latitude, h.longitude)]);
-      }
-      document.getElementById('status').innerText = 'Navigating to ' + h.name;
-    }
+  function patientPickedUp() {
+    phase = 'to_hospital';
+    fetch('/emergencies/' + currentEmergency.emergency_id + '/picked-up', {method: 'POST'});
+    document.getElementById('phaseBadge').className = 'phase-badge phase-hospital';
+    document.getElementById('phaseBadge').innerText = 'TO HOSPITAL';
+    document.getElementById('distanceLabel').innerText = 'to ' + currentEmergency.hospital.name;
+    var btn = document.getElementById('btnPickup');
+    if (btn) btn.remove();
+    if (destinationMarker) destinationMarker.remove();
+    var el = document.createElement('div');
+    el.innerHTML = '🏥';
+    el.style.fontSize = '28px';
+    destinationMarker = new maplibregl.Marker({element: el}).setLngLat([currentEmergency.hospital.longitude, currentEmergency.hospital.latitude]).addTo(map);
+  }
 
-    function loadLights() {
-      fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
-        Object.values(tlMarkers).forEach(m => map.removeLayer(m));
-        Object.values(tlCircles).forEach(c => map.removeLayer(c));
-        tlMarkers = {}; tlCircles = {};
-        var list = document.getElementById('tlList');
-        list.innerHTML = '';
-        lights.forEach(function(tl) {
-          var m = L.marker([tl.latitude, tl.longitude], {icon: lightIcon}).addTo(map).bindPopup(tl.name);
-          var c = L.circle([tl.latitude, tl.longitude], {radius: 50, color: 'green', fillColor: 'green', fillOpacity: 0.2}).addTo(map);
-          tlMarkers[tl.id] = m;
-          tlCircles[tl.id] = c;
-          var div = document.createElement('div');
-          div.className = 'tl-item';
-          div.innerHTML = '<button class="tl-delete" onclick="deleteLight(`'+tl.id+'`)">Delete</button><span>'+tl.name+'</span><small>'+tl.latitude.toFixed(5)+', '+tl.longitude.toFixed(5)+'</small>';
-          list.appendChild(div);
-        });
-      });
-    }
-
-    function deleteLight(id) {
-      fetch('/traffic-lights/' + id, {method: 'DELETE'}).then(function() { loadLights(); });
-    }
-
-    function openPanel() { document.getElementById('panel').classList.add('open'); loadLights(); }
-    function closePanel() { document.getElementById('panel').classList.remove('open'); }
-
-    function startPinMode() {
-      var name = document.getElementById('tlName').value.trim() || 'Traffic Light';
-      pinMode = name;
-      closePanel();
-      document.getElementById('mapInstruct').style.display = 'block';
-    }
-
-    map.on('click', function(e) {
-      if (!pinMode) return;
-      fetch('/traffic-lights', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: pinMode, latitude: e.latlng.lat, longitude: e.latlng.lng})}).then(function() {
-        pinMode = false;
-        document.getElementById('mapInstruct').style.display = 'none';
-        document.getElementById('tlName').value = '';
-        loadLights();
+  function loadLights() {
+    fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
+      Object.keys(tlMarkers).forEach(function(id) { tlMarkers[id].remove(); });
+      tlMarkers = {};
+      var list = document.getElementById('tlList');
+      list.innerHTML = '';
+      lights.forEach(function(tl) {
+        var el = document.createElement('div');
+        el.innerHTML = '🚦';
+        el.style.fontSize = '24px';
+        tlMarkers[tl.id] = new maplibregl.Marker({element: el}).setLngLat([tl.longitude, tl.latitude]).addTo(map);
+        var card = document.createElement('div');
+        card.className = 'tl-card';
+        card.innerHTML = '<span class="tl-icon">🚦</span><div class="tl-info"><div class="tl-name">'+tl.name+'</div><div class="tl-coords">'+tl.latitude.toFixed(5)+', '+tl.longitude.toFixed(5)+'</div></div><button class="tl-del" onclick="deleteLight(`'+tl.id+'`)">✕</button>';
+        list.appendChild(card);
       });
     });
+  }
 
-    function startNav() {
-      document.getElementById('status').innerText = 'Getting GPS...';
-      watchId = navigator.geolocation.watchPosition(function(pos) {
-        myPos = [pos.coords.latitude, pos.coords.longitude];
-        if (!ambulanceMarker) ambulanceMarker = L.marker(myPos, {icon: ambulanceIcon}).addTo(map);
-        else ambulanceMarker.setLatLng(myPos);
-        map.panTo(myPos);
-        if (nearestTL && phase === 'idle') routingControl.setWaypoints([L.latLng(myPos), L.latLng(nearestTL.latitude, nearestTL.longitude)]);
-      }, function(err) { document.getElementById('status').innerText = 'GPS error: ' + err.message; }, {enableHighAccuracy: true, maximumAge: 2000});
+  function deleteLight(id) {
+    fetch('/traffic-lights/' + id, {method: 'DELETE'}).then(function() { loadLights(); });
+  }
 
-      sendInterval = setInterval(function() {
-        if (!myPos) return;
-        fetch('/ambulance', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({latitude: myPos[0], longitude: myPos[1], id: ambulanceId})})
-        .then(r => r.json()).then(function(data) {
-          if (!data.traffic_lights) return;
-          var nearest = data.traffic_lights.reduce((a, b) => a.distance_meters < b.distance_meters ? a : b);
-          nearestTL = nearest;
-          document.getElementById('distance').innerText = nearest.distance_meters + ' m to ' + nearest.name;
-          data.traffic_lights.forEach(function(tl) {
-            if (tlCircles[tl.id]) {
-              tlCircles[tl.id].setStyle({color: tl.triggered ? 'red' : 'green', fillColor: tl.triggered ? 'red' : 'green'});
-            }
-          });
-          if (data.status === 'triggered' && !triggered) {
-            triggered = true;
-            document.getElementById('triggerAlert').style.display = 'block';
-            setTimeout(function() { document.getElementById('triggerAlert').style.display = 'none'; triggered = false; }, 4000);
-          }
-        });
-      }, 2000);
-    }
+  function openPanel() { document.getElementById('panel').classList.add('open'); }
+  function closePanel() { document.getElementById('panel').classList.remove('open'); }
 
-    function stopNav() {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
-      if (sendInterval) clearInterval(sendInterval);
-      document.getElementById('status').innerText = 'Stopped.';
-    }
+  function startPinMode() {
+    var name = document.getElementById('tlName').value.trim() || 'Traffic Light';
+    pinMode = name;
+    closePanel();
+    document.getElementById('mapInstruct').style.display = 'block';
+  }
 
-    function forceTrigger() {
-      fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
-        if (!lights.length) return;
-        var tl = lights[0];
-        fetch('/ambulance', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({latitude: tl.latitude, longitude: tl.longitude, id: ambulanceId})});
-        document.getElementById('status').innerText = 'Force triggered!';
+  map && map.on('click', function(e) {
+    if (!pinMode) return;
+    fetch('/traffic-lights', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: pinMode, latitude: e.lngLat.lat, longitude: e.lngLat.lng})}).then(function() {
+      pinMode = false;
+      document.getElementById('mapInstruct').style.display = 'none';
+      document.getElementById('tlName').value = '';
+      loadLights();
+    });
+  });
+
+  function startNav() {
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    watchId = navigator.geolocation.watchPosition(function(pos) {
+      myPos = [pos.coords.longitude, pos.coords.latitude];
+      if (!ambulanceMarker) {
+        var el = document.createElement('div');
+        el.innerHTML = '🚑';
+        el.style.fontSize = '28px';
+        ambulanceMarker = new maplibregl.Marker({element: el}).setLngLat(myPos).addTo(map);
+      } else {
+        ambulanceMarker.setLngLat(myPos);
+      }
+      map.easeTo({center: myPos, zoom: 17});
+    }, function(err) {}, {enableHighAccuracy: true, maximumAge: 2000});
+
+    sendInterval = setInterval(function() {
+      if (!myPos) return;
+      fetch('/ambulance', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({latitude: myPos[1], longitude: myPos[0], id: ambulanceId})})
+      .then(r => r.json()).then(function(data) {
+        if (!data.traffic_lights) return;
+        var nearest = data.traffic_lights.reduce((a, b) => a.distance_meters < b.distance_meters ? a : b);
+        nearestTL = nearest;
+        document.getElementById('distanceDisplay').innerText = nearest.distance_meters + ' m';
+        if (data.status === 'triggered' && !triggered) {
+          triggered = true;
+          document.getElementById('triggerBadge').style.display = 'block';
+          setTimeout(function() { document.getElementById('triggerBadge').style.display = 'none'; triggered = false; }, 4000);
+        }
       });
-    }
+    }, 2000);
+  }
 
-    loadLights();
-  </script>
+  function stopNav() {
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+    if (sendInterval) clearInterval(sendInterval);
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+  }
+
+  function forceTrigger() {
+    fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
+      if (!lights.length) return;
+      var tl = lights[0];
+      fetch('/ambulance', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({latitude: tl.latitude, longitude: tl.longitude, id: ambulanceId})});
+    });
+  }
+
+  var saved = localStorage.getItem('ambulanceId');
+  if (saved) {
+    ambulanceId = saved;
+    fetch('/ambulances/' + ambulanceId).then(r => r.json()).then(function(data) {
+      if (data.status === 'approved' || data.status === 'idle' || data.status === 'dispatched') {
+        launchApp();
+      } else if (data.status === 'pending') {
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('pendingScreen').style.display = 'flex';
+        pollApproval();
+      }
+    }).catch(function() {});
+  }
+</script>
 </body>
 </html>
 """
@@ -560,200 +714,268 @@ def hq_page():
 <!DOCTYPE html>
 <html>
 <head>
-  <title>HQ Dashboard</title>
+  <title>HQ Dispatch Center</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #0a1224; color: #fff; display: flex; height: 100vh; }
-    #sidebar { width: 320px; background: #121b36; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: #060d1a; color: #e8eaf6; height: 100vh; display: flex; overflow: hidden; }
+
+    #sidebar { width: 340px; background: #0a1628; border-right: 1px solid #1a2f4e; display: flex; flex-direction: column; flex-shrink: 0; }
+    #sidebarHeader { padding: 20px 20px 16px; border-bottom: 1px solid #1a2f4e; }
+    #sidebarHeader h1 { font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    #sidebarHeader .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    #sidebarHeader p { font-size: 12px; color: #7b8fa6; margin-top: 4px; }
+
+    #tabs { display: flex; border-bottom: 1px solid #1a2f4e; }
+    .tab { flex: 1; padding: 12px; text-align: center; font-size: 12px; font-weight: 600; color: #7b8fa6; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab.active { color: #60a5fa; border-bottom-color: #3b82f6; }
+
+    #tabContent { flex: 1; overflow-y: auto; padding: 16px; }
+
+    .section-title { font-size: 11px; font-weight: 600; color: #7b8fa6; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+
+    .amb-card { background: #0d1b2e; border: 1px solid #1a2f4e; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color 0.2s; }
+    .amb-card:hover { border-color: #3b82f6; }
+    .amb-card.selected { border-color: #3b82f6; background: #0f2040; }
+    .amb-icon { font-size: 24px; }
+    .amb-info { flex: 1; }
+    .amb-name { font-size: 13px; font-weight: 600; color: #fff; }
+    .amb-detail { font-size: 11px; color: #7b8fa6; margin-top: 2px; }
+    .amb-status { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+    .s-idle { background: #1a2f4e; color: #60a5fa; }
+    .s-pending { background: #78350f; color: #fbbf24; }
+    .s-dispatched { background: #1c3a1c; color: #4ade80; }
+
+    .pending-card { background: #0d1b2e; border: 1px solid #78350f; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+    .pending-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-approve { flex: 1; padding: 8px; background: #166534; border: none; border-radius: 8px; color: #4ade80; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-reject { flex: 1; padding: 8px; background: #7f1d1d; border: none; border-radius: 8px; color: #f87171; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+    #dispatchPanel { padding: 16px; border-top: 1px solid #1a2f4e; }
+    #dispatchPanel h3 { font-size: 12px; font-weight: 600; color: #7b8fa6; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+    select { width: 100%; padding: 10px 12px; background: #111f35; border: 1px solid #1a2f4e; border-radius: 8px; color: #fff; font-size: 13px; margin-bottom: 8px; outline: none; }
+    select:focus { border-color: #3b82f6; }
+    #patientInfo { background: #111f35; border: 1px solid #1a2f4e; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #7b8fa6; margin-bottom: 8px; min-height: 38px; }
+    .btn-pin-patient { width: 100%; padding: 10px; background: #1e3a5f; border: none; border-radius: 8px; color: #60a5fa; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+    .btn-dispatch { width: 100%; padding: 12px; background: #dc2626; border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-dispatch:hover { background: #b91c1c; }
+
     #map { flex: 1; }
-    h2 { color: #6fc5ff; font-size: 18px; }
-    h3 { color: #6fc5ff; font-size: 14px; margin-bottom: 8px; }
-    .amb-item { background: #1e2a4a; border-radius: 10px; padding: 10px; cursor: pointer; margin-bottom: 8px; }
-    .amb-item:hover { background: #2a3a6a; }
-    .amb-name { font-weight: bold; font-size: 14px; }
-    .amb-status { font-size: 12px; color: #a8b0d0; margin-top: 4px; }
-    .status-idle { color: #2ecc71; }
-    .status-dispatched { color: #e74c3c; }
-    select, input { width: 100%; padding: 8px; border-radius: 8px; border: none; background: #2f3450; color: #fff; margin-bottom: 8px; font-size: 13px; }
-    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 6px; }
-    .btn-red { background: #e74c3c; color: #fff; }
-    .btn-green { background: #2ecc71; color: #fff; }
-    #dispatchForm { background: #1e2a4a; border-radius: 10px; padding: 12px; }
-    #mapInstruct { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #f39c12; color: #000; padding: 10px 18px; border-radius: 20px; font-weight: bold; z-index: 3000; }
+
+    #mapInstruct { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: #000; padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 13px; z-index: 3000; }
+
+    #toast { position: fixed; top: 20px; right: 20px; background: #166534; color: #4ade80; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 9999; display: none; }
   </style>
 </head>
 <body>
-  <div id="sidebar">
-    <h2>HQ Dashboard</h2>
-    <div>
-      <h3>Ambulances</h3>
+<div id="sidebar">
+  <div id="sidebarHeader">
+    <h1><div class="dot"></div> HQ Dispatch Center</h1>
+    <p id="statsText">Loading...</p>
+  </div>
+  <div id="tabs">
+    <div class="tab active" onclick="showTab('ambulances')">Ambulances</div>
+    <div class="tab" onclick="showTab('pending')">Requests <span id="pendingCount"></span></div>
+  </div>
+  <div id="tabContent">
+    <div id="tabAmbulances">
+      <div class="section-title">Active Units</div>
       <div id="ambList"></div>
     </div>
-    <div id="dispatchForm">
-      <h3>Dispatch Emergency</h3>
-      <select id="selAmb"></select>
-      <select id="selHospital"></select>
-      <button class="btn btn-red" onclick="startPatientPin()">Pin Patient Location on Map</button>
-      <div id="patientCoords" style="font-size:12px;color:#a8b0d0;margin-bottom:8px;">No patient location set</div>
-      <button class="btn btn-green" onclick="dispatchEmergency()">Dispatch</button>
+    <div id="tabPending" style="display:none">
+      <div class="section-title">Pending Requests</div>
+      <div id="pendingList"></div>
     </div>
   </div>
-  <div id="mapInstruct">Click on map to set patient location</div>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    var map = L.map('map').setView([30.356472, 76.371972], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    var ambulanceIcon = L.divIcon({html: '🚑', className: '', iconSize: [30,30]});
-    var lightIcon = L.divIcon({html: '🚦', className: '', iconSize: [30,30]});
-    var patientIcon = L.divIcon({html: '📍', className: '', iconSize: [30,30]});
-    var hospitalIcon = L.divIcon({html: '🏥', className: '', iconSize: [30,30]});
-    var ambMarkers = {};
-    var patientMarker = null;
-    var patientPos = null;
-    var pinningPatient = false;
+  <div id="dispatchPanel">
+    <h3>Dispatch Emergency</h3>
+    <select id="selAmb"></select>
+    <select id="selHospital"></select>
+    <div id="patientInfo">No patient location pinned</div>
+    <button class="btn-pin-patient" onclick="startPatientPin()">📍 Pin Patient on Map</button>
+    <button class="btn-dispatch" onclick="dispatchEmergency()">🚨 Dispatch</button>
+  </div>
+</div>
+<div id="mapInstruct">Click map to set patient location</div>
+<div id="map"></div>
+<div id="toast"></div>
 
-    function loadAll() {
-      fetch('/ambulances').then(r => r.json()).then(function(ambs) {
-        var list = document.getElementById('ambList');
-        var sel = document.getElementById('selAmb');
-        list.innerHTML = '';
-        sel.innerHTML = '';
-        ambs.forEach(function(a) {
-          var div = document.createElement('div');
-          div.className = 'amb-item';
-          div.innerHTML = '<div class="amb-name">' + a.id + ' - ' + (a.driver_name || 'Unknown') + '</div><div class="amb-status status-' + a.status + '">' + a.status + '</div>';
-          list.appendChild(div);
-          if (a.latitude) {
-            if (!ambMarkers[a.id]) ambMarkers[a.id] = L.marker([a.latitude, a.longitude], {icon: ambulanceIcon}).addTo(map).bindPopup(a.id);
-            else ambMarkers[a.id].setLatLng([a.latitude, a.longitude]);
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<script>
+  var MAPTILER_KEY = 'oeqoZ7jmF643lIa3lxQ3';
+  var map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://api.maptiler.com/maps/dataviz-dark/style.json?key=' + MAPTILER_KEY,
+    center: [76.371972, 30.356472],
+    zoom: 15
+  });
+
+  var ambMarkers = {};
+  var tlMarkers = {};
+  var patientMarker = null;
+  var patientPos = null;
+  var pinningPatient = false;
+  var selectedAmb = null;
+
+  function showTab(tab) {
+    document.querySelectorAll('.tab').forEach(function(t,i) { t.classList.remove('active'); });
+    document.getElementById('tabAmbulances').style.display = tab === 'ambulances' ? 'block' : 'none';
+    document.getElementById('tabPending').style.display = tab === 'pending' ? 'block' : 'none';
+    event.target.classList.add('active');
+  }
+
+  function toast(msg, color) {
+    var t = document.getElementById('toast');
+    t.innerText = msg;
+    t.style.background = color || '#166534';
+    t.style.color = color ? '#fff' : '#4ade80';
+    t.style.display = 'block';
+    setTimeout(function() { t.style.display = 'none'; }, 3000);
+  }
+
+  function loadAll() {
+    fetch('/ambulances').then(r => r.json()).then(function(ambs) {
+      var list = document.getElementById('ambList');
+      var sel = document.getElementById('selAmb');
+      var pendingList = document.getElementById('pendingList');
+      list.innerHTML = '';
+      sel.innerHTML = '';
+      pendingList.innerHTML = '';
+      var pendingCount = 0;
+
+      ambs.forEach(function(a) {
+        if (a.status === 'pending') {
+          pendingCount++;
+          var card = document.createElement('div');
+          card.className = 'pending-card';
+          card.innerHTML = '<div class="amb-name">' + (a.driver_name || a.id) + '</div><div class="amb-detail">' + (a.vehicle || '') + '</div><div class="pending-actions"><button class="btn-approve" onclick="approveAmb(\''+a.id+'\')">✓ Approve</button><button class="btn-reject" onclick="rejectAmb(\''+a.id+'\')">✕ Reject</button></div>';
+          pendingList.appendChild(card);
+          return;
+        }
+
+        var card = document.createElement('div');
+        card.className = 'amb-card' + (selectedAmb === a.id ? ' selected' : '');
+        card.onclick = function() { selectedAmb = a.id; document.getElementById('selAmb').value = a.id; loadAll(); };
+        card.innerHTML = '<span class="amb-icon">🚑</span><div class="amb-info"><div class="amb-name">' + (a.driver_name || a.id) + '</div><div class="amb-detail">' + a.id + (a.vehicle ? ' · ' + a.vehicle : '') + '</div></div><span class="amb-status s-' + a.status + '">' + a.status.toUpperCase() + '</span>';
+        list.appendChild(card);
+
+        if (a.latitude) {
+          if (!ambMarkers[a.id]) {
+            var el = document.createElement('div');
+            el.innerHTML = '🚑';
+            el.style.fontSize = '24px';
+            ambMarkers[a.id] = new maplibregl.Marker({element: el}).setLngLat([a.longitude, a.latitude]).setPopup(new maplibregl.Popup().setText(a.driver_name || a.id)).addTo(map);
+          } else {
+            ambMarkers[a.id].setLngLat([a.longitude, a.latitude]);
           }
-          var opt = document.createElement('option');
-          opt.value = a.id;
-          opt.innerText = a.id + ' - ' + (a.driver_name || 'Unknown') + ' (' + a.status + ')';
-          sel.appendChild(opt);
-        });
+        }
+
+        var opt = document.createElement('option');
+        opt.value = a.id;
+        opt.innerText = (a.driver_name || a.id) + ' (' + a.status + ')';
+        sel.appendChild(opt);
       });
 
-      fetch('/hospitals').then(r => r.json()).then(function(hospitals) {
-        var sel = document.getElementById('selHospital');
-        sel.innerHTML = '';
-        hospitals.forEach(function(h) {
-          L.marker([h.latitude, h.longitude], {icon: hospitalIcon}).addTo(map).bindPopup(h.name);
-          var opt = document.createElement('option');
-          opt.value = h.id;
-          opt.innerText = h.name;
-          sel.appendChild(opt);
-        });
-      });
-
-      fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
-        lights.forEach(function(tl) {
-          L.marker([tl.latitude, tl.longitude], {icon: lightIcon}).addTo(map).bindPopup(tl.name);
-          L.circle([tl.latitude, tl.longitude], {radius: 50, color: 'green', fillColor: 'green', fillOpacity: 0.2}).addTo(map);
-        });
-      });
-    }
-
-    function startPatientPin() {
-      pinningPatient = true;
-      document.getElementById('mapInstruct').style.display = 'block';
-    }
-
-    map.on('click', function(e) {
-      if (!pinningPatient) return;
-      patientPos = e.latlng;
-      if (patientMarker) map.removeLayer(patientMarker);
-      patientMarker = L.marker(patientPos, {icon: patientIcon}).addTo(map).bindPopup('Patient').openPopup();
-      document.getElementById('patientCoords').innerText = 'Patient: ' + patientPos.lat.toFixed(5) + ', ' + patientPos.lng.toFixed(5);
-      document.getElementById('mapInstruct').style.display = 'none';
-      pinningPatient = false;
+      document.getElementById('pendingCount').innerText = pendingCount > 0 ? '(' + pendingCount + ')' : '';
+      document.getElementById('statsText').innerText = ambs.filter(a => a.status !== 'pending').length + ' units · ' + ambs.filter(a => a.status === 'dispatched').length + ' active';
     });
 
-    function dispatchEmergency() {
-      if (!patientPos) { alert('Pin patient location first'); return; }
-      var ambId = document.getElementById('selAmb').value;
-      var hospitalId = document.getElementById('selHospital').value;
-      fetch('/emergencies', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ambulance_id: ambId, patient_latitude: patientPos.lat, patient_longitude: patientPos.lng, hospital_id: hospitalId})
-      }).then(r => r.json()).then(function(data) {
-        alert('Emergency dispatched to ' + ambId);
-        loadAll();
+    fetch('/hospitals').then(r => r.json()).then(function(hospitals) {
+      var sel = document.getElementById('selHospital');
+      sel.innerHTML = '';
+      hospitals.forEach(function(h) {
+        var opt = document.createElement('option');
+        opt.value = h.id;
+        opt.innerText = h.name;
+        sel.appendChild(opt);
       });
-    }
+    });
 
-    loadAll();
-    setInterval(loadAll, 5000);
-
-    var ws = new WebSocket('wss://' + location.host + '/ws/traffic-light');
-    ws.onmessage = function(e) {
-      var data = JSON.parse(e.data);
-      if (data.ambulance) {
-        var pos = [data.ambulance.latitude, data.ambulance.longitude];
-        if (!ambMarkers[data.ambulance.id]) ambMarkers[data.ambulance.id] = L.marker(pos, {icon: ambulanceIcon}).addTo(map).bindPopup(data.ambulance.id);
-        else ambMarkers[data.ambulance.id].setLatLng(pos);
-      }
-    };
-    ws.onclose = function() { setTimeout(function() { location.reload(); }, 3000); };
-  </script>
-</body>
-</html>
-"""
-    return HTMLResponse(content=html)
-
-
-@app.get("/map")
-def map_page():
-    html = """
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Ambulance Map</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <style>body{margin:0;}#map{height:100vh;width:100%;}</style>
-</head>
-<body>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    var map = L.map('map').setView([30.356472, 76.371972], 18);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    var tlMarkers = {}, tlCircles = {};
-    var ambulanceIcon = L.divIcon({html: '🚑', className: '', iconSize: [30,30]});
-    var lightIcon = L.divIcon({html: '🚦', className: '', iconSize: [30,30]});
-    var ambulanceMarker = null;
-    function loadLights() {
-      fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
-        lights.forEach(function(tl) {
-          tlMarkers[tl.id] = L.marker([tl.latitude, tl.longitude], {icon: lightIcon}).addTo(map).bindPopup(tl.name);
-          tlCircles[tl.id] = L.circle([tl.latitude, tl.longitude], {radius: 50, color: 'green', fillColor: 'green', fillOpacity: 0.2}).addTo(map);
-        });
-      });
-    }
-    function connectWS() {
-      var ws = new WebSocket('wss://' + location.host + '/ws/traffic-light');
-      ws.onmessage = function(e) {
-        var data = JSON.parse(e.data);
-        if (!data.ambulance) return;
-        var pos = [data.ambulance.latitude, data.ambulance.longitude];
-        if (!ambulanceMarker) ambulanceMarker = L.marker(pos, {icon: ambulanceIcon}).addTo(map);
-        else ambulanceMarker.setLatLng(pos);
-        map.panTo(pos);
-        if (data.traffic_lights) {
-          data.traffic_lights.forEach(function(tl) {
-            if (tlCircles[tl.id]) tlCircles[tl.id].setStyle({color: tl.triggered ? 'red' : 'green', fillColor: tl.triggered ? 'red' : 'green'});
-          });
+    fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
+      lights.forEach(function(tl) {
+        if (!tlMarkers[tl.id]) {
+          var el = document.createElement('div');
+          el.innerHTML = '🚦';
+          el.style.fontSize = '22px';
+          tlMarkers[tl.id] = new maplibregl.Marker({element: el}).setLngLat([tl.longitude, tl.latitude]).setPopup(new maplibregl.Popup().setText(tl.name)).addTo(map);
         }
-      };
-      ws.onclose = function() { setTimeout(connectWS, 2000); };
+      });
+    });
+  }
+
+  function approveAmb(id) {
+    fetch('/ambulances/' + id + '/approve', {method: 'POST'}).then(function() {
+      toast('Ambulance approved');
+      loadAll();
+    });
+  }
+
+  function rejectAmb(id) {
+    fetch('/ambulances/' + id, {method: 'DELETE'}).then(function() {
+      toast('Request rejected', '#7f1d1d');
+      loadAll();
+    });
+  }
+
+  function startPatientPin() {
+    pinningPatient = true;
+    document.getElementById('mapInstruct').style.display = 'block';
+  }
+
+  map.on('click', function(e) {
+    if (!pinningPatient) return;
+    patientPos = e.lngLat;
+    if (patientMarker) patientMarker.remove();
+    var el = document.createElement('div');
+    el.innerHTML = '📍';
+    el.style.fontSize = '28px';
+    patientMarker = new maplibregl.Marker({element: el}).setLngLat(patientPos).addTo(map);
+    document.getElementById('patientInfo').innerText = 'Patient: ' + patientPos.lat.toFixed(5) + ', ' + patientPos.lng.toFixed(5);
+    document.getElementById('mapInstruct').style.display = 'none';
+    pinningPatient = false;
+  });
+
+  function dispatchEmergency() {
+    if (!patientPos) { toast('Pin patient location first', '#78350f'); return; }
+    var ambId = document.getElementById('selAmb').value;
+    var hospitalId = document.getElementById('selHospital').value;
+    if (!ambId) { toast('Select an ambulance', '#78350f'); return; }
+    fetch('/emergencies', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ambulance_id: ambId, patient_latitude: patientPos.lat, patient_longitude: patientPos.lng, hospital_id: hospitalId})
+    }).then(r => r.json()).then(function() {
+      toast('Emergency dispatched to ' + ambId);
+      patientPos = null;
+      if (patientMarker) { patientMarker.remove(); patientMarker = null; }
+      document.getElementById('patientInfo').innerText = 'No patient location pinned';
+      loadAll();
+    });
+  }
+
+  var ws = new WebSocket('wss://' + location.host + '/ws/traffic-light');
+  ws.onmessage = function(e) {
+    var data = JSON.parse(e.data);
+    if (data.ambulance) {
+      var pos = [data.ambulance.longitude, data.ambulance.latitude];
+      if (!ambMarkers[data.ambulance.id]) {
+        var el = document.createElement('div');
+        el.innerHTML = '🚑';
+        el.style.fontSize = '24px';
+        ambMarkers[data.ambulance.id] = new maplibregl.Marker({element: el}).setLngLat(pos).addTo(map);
+      } else {
+        ambMarkers[data.ambulance.id].setLngLat(pos);
+      }
     }
-    loadLights();
-    connectWS();
-  </script>
+  };
+  ws.onclose = function() { setTimeout(function() { location.reload(); }, 3000); };
+
+  loadAll();
+  setInterval(loadAll, 5000);
+</script>
 </body>
 </html>
 """
