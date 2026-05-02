@@ -1,8 +1,22 @@
 f = open('server.py', 'r', encoding='utf-8')
-lines = f.readlines()
+content = f.read()
 f.close()
-lines[851] = "          card.innerHTML = '<div class=\"amb-name\">' + (a.driver_name || a.id) + '</div><div class=\"amb-detail\">' + (a.vehicle || '') + '</div><div class=\"pending-actions\"><button class=\"btn-approve\" data-id=\"' + a.id + '\" onclick=\"approveAmb(this.dataset.id)\">Approve</button><button class=\"btn-reject\" data-id=\"' + a.id + '\" onclick=\"rejectAmb(this.dataset.id)\">Reject</button></div>';\n"
+
+# Find and replace the navigate function
+nav_start = content.find('@app.get("/navigate")')
+nav_end = content.find('@app.get("/map")')
+
+new_nav = '''@app.get("/navigate")
+def navigate_page():
+    html_path = Path(__file__).resolve().parent / "navigate.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+
+'''
+
+content = content[:nav_start] + new_nav + content[nav_end:]
+
 f = open('server.py', 'w', encoding='utf-8')
-f.writelines(lines)
+f.write(content)
 f.close()
 print('done')
