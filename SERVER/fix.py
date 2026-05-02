@@ -29,3 +29,22 @@ f = open('server.py', 'w', encoding='utf-8')
 f.writelines(lines)
 f.close()
 print('done')
+f = open('server.py', 'r', encoding='utf-8')
+content = f.read()
+f.close()
+
+hq_endpoint = '''
+@app.get("/hq")
+def hq_page():
+    html_path = Path(__file__).resolve().parent / "hq.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+'''
+
+# Insert before the /map endpoint
+content = content.replace('@app.get("/map")', hq_endpoint + '@app.get("/map")')
+
+f = open('server.py', 'w', encoding='utf-8')
+f.write(content)
+f.close()
+print('done')
