@@ -1,8 +1,17 @@
 f = open('server.py', 'r', encoding='utf-8')
-lines = f.readlines()
+content = f.read()
 f.close()
-lines[471] = '          div.innerHTML = \'<button class="tl-delete" onclick="deleteLight(`\'+tl.id+\'`)">Delete</button><span>\'+tl.name+\'</span><small>\'+tl.latitude.toFixed(5)+\', \'+tl.longitude.toFixed(5)+\'</small>\';\n'
+
+content = content.replace(
+    "onclick=\"approveAmb(''+a.id+'')\"",
+    "onclick=\"approveAmb(`\"+a.id+\"`)\"" 
+)
+content = content.replace(
+    "onclick=\"rejectAmb(''+a.id+'')\"",
+    "onclick=\"rejectAmb(`\"+a.id+\"`)\"" 
+)
+
 f = open('server.py', 'w', encoding='utf-8')
-f.writelines(lines)
+f.write(content)
 f.close()
 print('done')
