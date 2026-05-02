@@ -1,17 +1,8 @@
 f = open('server.py', 'r', encoding='utf-8')
-content = f.read()
+lines = f.readlines()
 f.close()
-
-content = content.replace(
-    "onclick=\"approveAmb(''+a.id+'')\"",
-    "onclick=\"approveAmb(`\"+a.id+\"`)\"" 
-)
-content = content.replace(
-    "onclick=\"rejectAmb(''+a.id+'')\"",
-    "onclick=\"rejectAmb(`\"+a.id+\"`)\"" 
-)
-
+lines[852] = '          card.innerHTML = \'<div class="amb-name">\' + (a.driver_name || a.id) + \'</div><div class="amb-detail">\' + (a.vehicle || \'\') + \'</div><div class="pending-actions"><button class="btn-approve" onclick="approveAmb(`\' + a.id + \'`)">Approve</button><button class="btn-reject" onclick="rejectAmb(`\' + a.id + \'`)">Reject</button></div>\';\n'
 f = open('server.py', 'w', encoding='utf-8')
-f.write(content)
+f.writelines(lines)
 f.close()
 print('done')
