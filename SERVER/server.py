@@ -318,4 +318,3 @@ def navigate_page():
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
 
 
-)

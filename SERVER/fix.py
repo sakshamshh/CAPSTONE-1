@@ -20,3 +20,12 @@ f = open('server.py', 'w', encoding='utf-8')
 f.write(content)
 f.close()
 print('done')
+
+f = open('server.py', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+lines[320] = ''
+f = open('server.py', 'w', encoding='utf-8')
+f.writelines(lines)
+f.close()
+print('done')
