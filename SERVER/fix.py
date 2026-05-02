@@ -70,3 +70,51 @@ f = open('server.py', 'w', encoding='utf-8')
 f.write(content)
 f.close()
 print('done')
+
+
+f = open('server.py', 'r', encoding='utf-8')
+content = f.read()
+f.close()
+
+endpoints = '''
+
+class RegisterModel(BaseModel):
+    driver_name: str
+    vehicle: Optional[str] = None
+
+
+@app.post("/register")
+def register_ambulance(data: RegisterModel):
+    new_id = "amb-" + str(uuid.uuid4())[:6]
+    new_amb = {"id": new_id, "driver_name": data.driver_name, "vehicle": data.vehicle, "status": "pending"}
+    supabase.table("ambulances").insert(new_amb).execute()
+    return new_amb
+
+
+@app.get("/ambulances/{amb_id}")
+def get_ambulance(amb_id: str):
+    result = supabase.table("ambulances").select("*").eq("id", amb_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Not found")
+    return result.data[0]
+
+
+@app.post("/ambulances/{amb_id}/approve")
+def approve_ambulance(amb_id: str):
+    supabase.table("ambulances").update({"status": "idle"}).eq("id", amb_id).execute()
+    return {"status": "approved"}
+
+
+@app.delete("/ambulances/{amb_id}")
+def delete_ambulance(amb_id: str):
+    supabase.table("ambulances").delete().eq("id", amb_id).execute()
+    return {"status": "deleted"}
+
+'''
+
+content += endpoints
+
+f = open('server.py', 'w', encoding='utf-8')
+f.write(content)
+f.close()
+print('done')
