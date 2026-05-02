@@ -417,7 +417,7 @@ def navigate_page():
       var data = JSON.parse(e.data);
       if (data.type === 'dispatch') {
         currentEmergency = data;
-        document.getElementById('dispatchInfo').innerText = 'Patient at ' + data.patient_latitude.toFixed(5) + ', ' + data.patient_longitude.toFixed(5) + '\nHospital: ' + data.hospital.name;
+        document.getElementById('dispatchInfo').innerText = 'Patient at ' + data.patient_latitude.toFixed(5) + ', ' + data.patient_longitude.toFixed(5) + ' | Hospital: ' + data.hospital.name;
         document.getElementById('dispatchAlert').classList.add('show');
       }
     };
