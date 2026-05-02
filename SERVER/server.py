@@ -469,7 +469,7 @@ def navigate_page():
           tlCircles[tl.id] = c;
           var div = document.createElement('div');
           div.className = 'tl-item';
-          div.innerHTML = '<button class="tl-delete" onclick="deleteLight(\''+tl.id+'\')">Delete</button><span>'+tl.name+'</span><small>'+tl.latitude.toFixed(5)+', '+tl.longitude.toFixed(5)+'</small>';
+   div.innerHTML = '<button class="tl-delete" onclick="deleteLight(`'+tl.id+'`)">Delete</button><span>'+tl.name+'</span><small>'+tl.latitude.toFixed(5)+', '+tl.longitude.toFixed(5)+'</small>';<small>'+tl.latitude.toFixed(5)+', '+tl.longitude.toFixed(5)+'</small>';
           list.appendChild(div);
         });
       });
