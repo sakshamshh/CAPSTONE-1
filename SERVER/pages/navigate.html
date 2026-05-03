@@ -1,146 +1,245 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ambulance Driver</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Ambulance Dispatch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body { background: #060d1a; color: #e8eaf6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    :root {
+      --glass: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+      --blue: #3b82f6;
+      --blue-glow: rgba(59,130,246,0.3);
+      --green: #10b981;
+      --green-glow: rgba(16,185,129,0.3);
+      --red: #ef4444;
+      --red-glow: rgba(239,68,68,0.3);
+      --amber: #f59e0b;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --bg: #020817;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-    #registerScreen { position: fixed; inset: 0; background: #060d1a; display: flex; align-items: center; justify-content: center; z-index: 9999; }
-    .reg-card { background: #0d1b2e; border: 1px solid #1e3a5f; border-radius: 20px; padding: 40px; width: 340px; text-align: center; }
-    .reg-logo { font-size: 48px; margin-bottom: 16px; }
-    .reg-card h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-    .reg-card p { font-size: 13px; color: #7b8fa6; margin-bottom: 24px; }
-    .reg-card input { width: 100%; padding: 12px 16px; background: #111f35; border: 1px solid #1e3a5f; border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 12px; outline: none; }
-    .reg-card input:focus { border-color: #3b82f6; }
-    .reg-card input::placeholder { color: #4a5f7a; }
-    .btn-primary { width: 100%; padding: 13px; background: #2563eb; border: none; border-radius: 10px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
-    #regStatus { font-size: 13px; color: #7b8fa6; margin-top: 14px; min-height: 20px; }
+    /* REGISTER SCREEN */
+    #registerScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 24px; }
+    #registerScreen::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.15) 0%, transparent 60%); pointer-events: none; }
+    .reg-card { background: rgba(15,23,42,0.9); border: 1px solid var(--glass-border); border-radius: 28px; padding: 40px 36px; width: 100%; max-width: 380px; backdrop-filter: blur(40px); box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 32px 64px rgba(0,0,0,0.5); position: relative; }
+    .reg-card::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 1px; background: linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent); }
+    .reg-logo { width: 64px; height: 64px; background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(16,185,129,0.2)); border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 24px; box-shadow: 0 0 30px rgba(59,130,246,0.2); }
+    .reg-card h1 { font-size: 24px; font-weight: 700; color: #fff; text-align: center; margin-bottom: 6px; letter-spacing: -0.5px; }
+    .reg-card p { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 32px; line-height: 1.6; }
+    .input-group { margin-bottom: 12px; position: relative; }
+    .input-group input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; color: #fff; font-size: 14px; outline: none; transition: all 0.2s; }
+    .input-group input:focus { border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.05); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .input-group input::placeholder { color: #334155; }
+    .btn-register { width: 100%; padding: 15px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; border-radius: 14px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 4px 24px rgba(37,99,235,0.4); transition: all 0.2s; letter-spacing: 0.3px; }
+    .btn-register:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(37,99,235,0.5); }
+    #regStatus { font-size: 12px; color: var(--muted); text-align: center; margin-top: 16px; min-height: 18px; }
 
-    #pendingScreen { position: fixed; inset: 0; background: #060d1a; display: none; align-items: center; justify-content: center; z-index: 9999; }
-    .pending-card { background: #0d1b2e; border: 1px solid #1e3a5f; border-radius: 20px; padding: 40px; width: 340px; text-align: center; }
-    .spinner { width: 48px; height: 48px; border: 3px solid #1e3a5f; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    /* PENDING SCREEN */
+    #pendingScreen { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 24px; }
+    #pendingScreen::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, rgba(245,158,11,0.1) 0%, transparent 60%); pointer-events: none; }
+    .pending-card { background: rgba(15,23,42,0.9); border: 1px solid rgba(245,158,11,0.2); border-radius: 28px; padding: 48px 36px; width: 100%; max-width: 340px; text-align: center; backdrop-filter: blur(40px); }
+    .spinner-wrap { width: 72px; height: 72px; margin: 0 auto 28px; position: relative; }
+    .spinner-wrap::before { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(245,158,11,0.1); }
+    .spinner { width: 72px; height: 72px; border: 2px solid transparent; border-top-color: var(--amber); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .pending-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-    .pending-card p { font-size: 13px; color: #7b8fa6; }
+    .pending-card h2 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .pending-card p { font-size: 13px; color: var(--muted); line-height: 1.7; }
 
-    #appScreen { display: none; flex-direction: column; height: 100vh; }
-    #topbar { background: #0a1628; border-bottom: 1px solid #1a2f4e; padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-    .amb-badge { background: #1a2f4e; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #60a5fa; }
-    .phase-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-    .phase-idle { background: #1a2f4e; color: #7b8fa6; }
-    .phase-patient { background: #1c3a1c; color: #4ade80; }
-    .phase-hospital { background: #3a1c1c; color: #f87171; }
-    .topbar-spacer { flex: 1; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    /* APP SCREEN */
+    #appScreen { display: none; flex-direction: column; height: 100vh; position: relative; }
 
-    #infobar { background: #0a1628; border-bottom: 1px solid #1a2f4e; padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-    #distanceDisplay { font-size: 26px; font-weight: 700; color: #fff; }
-    #distanceLabel { font-size: 11px; color: #7b8fa6; margin-top: 2px; }
-    .infobar-spacer { flex: 1; }
-    #triggerBadge { display: none; background: #dc2626; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; animation: blink 0.5s infinite; }
-    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+    /* MAP */
+    #map { position: absolute; inset: 0; }
 
-    #map { flex: 1; }
+    /* TOP HUD */
+    #topHud { position: absolute; top: 0; left: 0; right: 0; padding: 48px 16px 16px; background: linear-gradient(to bottom, rgba(2,8,23,0.95) 0%, rgba(2,8,23,0.7) 70%, transparent 100%); pointer-events: none; z-index: 10; }
+    .hud-row { display: flex; align-items: center; gap: 10px; pointer-events: all; }
+    .hud-badge { background: rgba(15,23,42,0.8); border: 1px solid var(--glass-border); backdrop-filter: blur(20px); border-radius: 12px; padding: 6px 12px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .hud-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    .phase-pill { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .phase-standby { background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(100,116,139,0.2); }
+    .phase-patient { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); box-shadow: 0 0 20px rgba(16,185,129,0.1); }
+    .phase-hospital { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); box-shadow: 0 0 20px rgba(239,68,68,0.1); }
 
-    #bottombar { background: #0a1628; border-top: 1px solid #1a2f4e; padding: 10px 12px; display: flex; gap: 8px; flex-shrink: 0; }
-    .btn { flex: 1; padding: 12px 6px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-start { background: #166534; color: #4ade80; }
-    .btn-stop { background: #7f1d1d; color: #f87171; }
-    .btn-force { background: #78350f; color: #fbbf24; }
-    .btn-lights { background: #1e3a5f; color: #60a5fa; }
-    .btn-pickup { background: #4c1d95; color: #c4b5fd; }
+    /* DISTANCE CARD */
+    #distCard { position: absolute; top: 110px; left: 16px; right: 16px; z-index: 10; pointer-events: none; }
+    .dist-inner { background: rgba(15,23,42,0.75); border: 1px solid var(--glass-border); backdrop-filter: blur(24px); border-radius: 20px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .dist-num { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -1px; line-height: 1; }
+    .dist-unit { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .dist-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .dist-divider { width: 1px; height: 40px; background: var(--glass-border); flex-shrink: 0; }
+    .dist-right { flex: 1; }
+    .dist-status { font-size: 13px; font-weight: 600; color: #fff; }
+    .dist-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
-    #dispatchOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 9000; align-items: center; justify-content: center; }
+    /* TRIGGER FLASH */
+    #triggerFlash { position: fixed; inset: 0; background: rgba(16,185,129,0.08); z-index: 50; pointer-events: none; display: none; animation: flash 0.5s infinite; }
+    @keyframes flash { 0%,100%{opacity:0;} 50%{opacity:1;} }
+    #triggerBanner { position: absolute; top: 200px; left: 16px; right: 16px; z-index: 20; display: none; }
+    .trigger-inner { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.1)); border: 1px solid rgba(16,185,129,0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 0 40px rgba(16,185,129,0.2); }
+    .trigger-icon { font-size: 24px; }
+    .trigger-text { font-size: 14px; font-weight: 700; color: #34d399; }
+    .trigger-sub { font-size: 11px; color: rgba(52,211,153,0.7); margin-top: 2px; }
+
+    /* BOTTOM PANEL */
+    #bottomPanel { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 16px; background: linear-gradient(to top, rgba(2,8,23,0.98) 0%, rgba(2,8,23,0.8) 80%, transparent 100%); padding-top: 40px; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .btn { flex: 1; padding: 14px 8px; border: none; border-radius: 16px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px; text-transform: uppercase; }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .btn-start { background: linear-gradient(135deg, #059669, #047857); color: #fff; box-shadow: 0 4px 16px rgba(5,150,105,0.4); }
+    .btn-stop { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .btn-force { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .btn-lights { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .btn-pickup { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; box-shadow: 0 4px 16px rgba(124,58,237,0.4); flex: 2; }
+
+    /* TL LIST */
+    #tlCards { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 120px; overflow-y: auto; }
+    .tl-strip { background: rgba(15,23,42,0.6); border: 1px solid var(--glass-border); backdrop-filter: blur(12px); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .tl-strip.triggered { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.08); }
+    .tl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+    .tl-strip.triggered .tl-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .tl-name { flex: 1; font-size: 12px; font-weight: 600; color: #cbd5e1; }
+    .tl-dist { font-size: 11px; color: var(--muted); }
+
+    /* DISPATCH OVERLAY */
+    #dispatchOverlay { display: none; position: fixed; inset: 0; z-index: 9000; align-items: flex-end; justify-content: center; padding: 20px; }
+    #dispatchOverlay::before { content: ''; position: absolute; inset: 0; background: rgba(2,8,23,0.85); backdrop-filter: blur(8px); }
     #dispatchOverlay.show { display: flex; }
-    .dispatch-card { background: #0d1b2e; border: 1px solid #dc2626; border-radius: 20px; padding: 28px; width: 310px; }
-    .dispatch-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .dispatch-icon { font-size: 28px; }
-    .dispatch-card h2 { font-size: 18px; font-weight: 700; color: #f87171; }
-    .dispatch-info { background: #111f35; border-radius: 10px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: #cbd5e1; line-height: 2; }
-    .dispatch-info strong { color: #fff; }
-    .btn-accept { width: 100%; padding: 14px; background: #166534; border: none; border-radius: 10px; color: #4ade80; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .dispatch-card { background: rgba(15,23,42,0.95); border: 1px solid rgba(239,68,68,0.3); border-radius: 28px; padding: 28px; width: 100%; max-width: 420px; position: relative; box-shadow: 0 0 60px rgba(239,68,68,0.15), 0 32px 64px rgba(0,0,0,0.6); animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .dispatch-card::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 50%; height: 1px; background: linear-gradient(90deg, transparent, rgba(239,68,68,0.6), transparent); }
+    .dispatch-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .dispatch-alert-icon { width: 48px; height: 48px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; animation: alertPulse 1s infinite; flex-shrink: 0; }
+    @keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4);} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0);} }
+    .dispatch-title { font-size: 20px; font-weight: 800; color: #f87171; letter-spacing: -0.5px; }
+    .dispatch-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .dispatch-info { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+    .dispatch-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--glass-border); }
+    .dispatch-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .dispatch-row:first-child { padding-top: 0; }
+    .dispatch-row-icon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+    .dispatch-row-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .dispatch-row-value { font-size: 13px; font-weight: 600; color: #fff; margin-top: 1px; }
+    .btn-accept { width: 100%; padding: 16px; background: linear-gradient(135deg, #059669, #047857); border: none; border-radius: 16px; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 24px rgba(5,150,105,0.4); letter-spacing: 0.5px; transition: all 0.2s; }
+    .btn-accept:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(5,150,105,0.5); }
 
-    #panel { position: fixed; right: 0; top: 0; bottom: 0; width: 270px; background: #0a1628; border-left: 1px solid #1a2f4e; padding: 16px; overflow-y: auto; z-index: 2000; transform: translateX(100%); transition: transform 0.3s; }
+    /* PANEL */
+    #panel { position: fixed; right: 0; top: 0; bottom: 0; width: 300px; background: rgba(10,16,32,0.95); border-left: 1px solid var(--glass-border); backdrop-filter: blur(40px); padding: 60px 16px 16px; overflow-y: auto; z-index: 2000; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
     #panel.open { transform: translateX(0); }
-    #panel h3 { font-size: 13px; font-weight: 600; color: #60a5fa; margin-bottom: 12px; }
-    .tl-card { background: #0d1b2e; border: 1px solid #1a2f4e; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
-    .tl-info { flex: 1; }
-    .tl-name { font-size: 13px; font-weight: 600; }
-    .tl-coords { font-size: 11px; color: #7b8fa6; margin-top: 2px; }
-    .tl-del { background: #7f1d1d; border: none; border-radius: 6px; color: #f87171; padding: 4px 8px; font-size: 11px; cursor: pointer; }
-    #panel input { width: 100%; padding: 10px 12px; background: #111f35; border: 1px solid #1a2f4e; border-radius: 8px; color: #fff; font-size: 13px; margin-bottom: 8px; outline: none; }
-    .btn-pin { width: 100%; padding: 10px; background: #1e3a5f; border: none; border-radius: 8px; color: #60a5fa; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
-    .btn-close-panel { width: 100%; padding: 8px; background: transparent; border: 1px solid #1a2f4e; border-radius: 8px; color: #7b8fa6; font-size: 13px; cursor: pointer; margin-bottom: 16px; }
-    #mapInstruct { display: none; position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: #000; padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 13px; z-index: 3000; }
+    #panel h3 { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; }
+    .panel-tl { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .panel-tl-info { flex: 1; }
+    .panel-tl-name { font-size: 13px; font-weight: 600; }
+    .panel-tl-coords { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .panel-tl-del { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #f87171; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+    #panel input { width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 12px; color: #fff; font-size: 13px; margin-bottom: 8px; outline: none; }
+    #panel input:focus { border-color: rgba(59,130,246,0.4); }
+    .btn-pin { width: 100%; padding: 12px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 12px; color: #60a5fa; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+    .btn-close-panel { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--glass-border); border-radius: 12px; color: var(--muted); font-size: 13px; cursor: pointer; margin-bottom: 20px; }
+
+    #mapInstruct { display: none; position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%); background: rgba(245,158,11,0.9); backdrop-filter: blur(10px); color: #000; padding: 12px 24px; border-radius: 24px; font-weight: 600; font-size: 13px; z-index: 3000; white-space: nowrap; box-shadow: 0 8px 32px rgba(245,158,11,0.4); }
   </style>
 </head>
 <body>
 
+<!-- REGISTER -->
 <div id="registerScreen">
   <div class="reg-card">
     <div class="reg-logo">🚑</div>
     <h1>Ambulance Driver</h1>
-    <p>Register to receive emergency dispatches from HQ</p>
-    <input id="driverName" placeholder="Your full name" />
-    <input id="driverVehicle" placeholder="Vehicle number (e.g. PB-11-1234)" />
-    <button class="btn-primary" onclick="register()">Request Access</button>
+    <p>Register your unit to receive emergency dispatches from headquarters</p>
+    <div class="input-group"><input id="driverName" placeholder="Full name" /></div>
+    <div class="input-group"><input id="driverVehicle" placeholder="Vehicle number (e.g. PB-11-1234)" /></div>
+    <button class="btn-register" onclick="register()">Request Access</button>
     <div id="regStatus"></div>
   </div>
 </div>
 
+<!-- PENDING -->
 <div id="pendingScreen">
   <div class="pending-card">
-    <div class="spinner"></div>
+    <div class="spinner-wrap"><div class="spinner"></div></div>
     <h2>Awaiting Approval</h2>
-    <p>Your request has been sent to HQ. Please wait for approval.</p>
+    <p>Your registration has been sent to HQ. You will be connected automatically once approved.</p>
   </div>
 </div>
 
+<!-- APP -->
 <div id="appScreen">
-  <div id="topbar">
-    <span class="amb-badge" id="ambIdBadge">AMB</span>
-    <span class="phase-badge phase-idle" id="phaseBadge">STANDBY</span>
-    <div class="topbar-spacer"></div>
-    <div class="status-dot"></div>
-  </div>
-  <div id="infobar">
-    <div>
-      <div id="distanceDisplay">— m</div>
-      <div id="distanceLabel">to nearest traffic light</div>
-    </div>
-    <div class="infobar-spacer"></div>
-    <div id="triggerBadge">🚨 TRIGGERED</div>
-  </div>
   <div id="map"></div>
-  <div id="bottombar">
-    <button class="btn btn-start" id="btnStart" onclick="startNav()">▶ Start</button>
-    <button class="btn btn-stop" id="btnStop" onclick="stopNav()" disabled>■ Stop</button>
-    <button class="btn btn-force" onclick="forceTrigger()">⚡ Force</button>
-    <button class="btn btn-lights" onclick="openPanel()">🚦 Lights</button>
+
+  <div id="topHud">
+    <div class="hud-row">
+      <div class="hud-badge"><div class="dot"></div><span id="ambIdBadge">UNIT</span></div>
+      <div class="phase-pill phase-standby" id="phaseBadge">Standby</div>
+    </div>
+  </div>
+
+  <div id="distCard">
+    <div class="dist-inner">
+      <div>
+        <div class="dist-num" id="distNum">—</div>
+        <div class="dist-unit">meters</div>
+      </div>
+      <div class="dist-divider"></div>
+      <div class="dist-right">
+        <div class="dist-status" id="distStatus">Waiting for GPS</div>
+        <div class="dist-sub" id="distSub">Start navigation to begin</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="triggerFlash"></div>
+  <div id="triggerBanner">
+    <div class="trigger-inner">
+      <div class="trigger-icon">🟢</div>
+      <div>
+        <div class="trigger-text">TRAFFIC LIGHT TRIGGERED</div>
+        <div class="trigger-sub">Proceed through intersection</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tlCards"></div>
+
+  <div id="bottomPanel">
+    <div id="tlCards"></div>
+    <div class="btn-row" id="btnRow">
+      <button class="btn btn-start" id="btnStart" onclick="startNav()">▶ Start</button>
+      <button class="btn btn-stop" id="btnStop" onclick="stopNav()" disabled>■ Stop</button>
+      <button class="btn btn-force" onclick="forceTrigger()">⚡</button>
+      <button class="btn btn-lights" onclick="openPanel()">🚦</button>
+    </div>
   </div>
 </div>
 
+<!-- DISPATCH -->
 <div id="dispatchOverlay">
   <div class="dispatch-card">
     <div class="dispatch-header">
-      <span class="dispatch-icon">🚨</span>
-      <h2>EMERGENCY DISPATCH</h2>
+      <div class="dispatch-alert-icon">🚨</div>
+      <div>
+        <div class="dispatch-title">EMERGENCY DISPATCH</div>
+        <div class="dispatch-subtitle">New assignment from HQ</div>
+      </div>
     </div>
     <div class="dispatch-info" id="dispatchInfo"></div>
-    <button class="btn-accept" onclick="acceptDispatch()">Accept and Navigate</button>
+    <button class="btn-accept" onclick="acceptDispatch()">Accept & Navigate</button>
   </div>
 </div>
 
+<!-- PANEL -->
 <div id="panel">
-  <button class="btn-close-panel" onclick="closePanel()">Close</button>
+  <button class="btn-close-panel" onclick="closePanel()">✕ Close</button>
   <h3>Traffic Lights</h3>
-  <div id="tlList"></div>
+  <div id="panelTlList"></div>
   <input id="tlName" placeholder="Light name (e.g. Gate 2)" />
   <button class="btn-pin" onclick="startPinMode()">📍 Tap Map to Place</button>
 </div>
@@ -201,7 +300,7 @@
   function launchApp() {
     document.getElementById('pendingScreen').style.display = 'none';
     document.getElementById('appScreen').style.display = 'flex';
-    document.getElementById('ambIdBadge').innerText = ambulanceId;
+    document.getElementById('ambIdBadge').innerText = ambulanceId.toUpperCase();
     initMap();
     connectWS();
     loadLights();
@@ -236,8 +335,8 @@
       if (data.type === 'dispatch') {
         currentEmergency = data;
         document.getElementById('dispatchInfo').innerHTML =
-          '<strong>Patient:</strong> ' + data.patient_latitude.toFixed(5) + ', ' + data.patient_longitude.toFixed(5) +
-          '<br><strong>Hospital:</strong> ' + data.hospital.name;
+          '<div class="dispatch-row"><div class="dispatch-row-icon">📍</div><div><div class="dispatch-row-label">Patient Location</div><div class="dispatch-row-value">' + data.patient_latitude.toFixed(5) + ', ' + data.patient_longitude.toFixed(5) + '</div></div></div>' +
+          '<div class="dispatch-row"><div class="dispatch-row-icon">🏥</div><div><div class="dispatch-row-label">Destination Hospital</div><div class="dispatch-row-value">' + data.hospital.name + '</div></div></div>';
         document.getElementById('dispatchOverlay').classList.add('show');
       }
     };
@@ -247,80 +346,74 @@
   function acceptDispatch() {
     document.getElementById('dispatchOverlay').classList.remove('show');
     phase = 'to_patient';
-    document.getElementById('phaseBadge').className = 'phase-badge phase-patient';
-    document.getElementById('phaseBadge').innerText = 'TO PATIENT';
-    document.getElementById('distanceLabel').innerText = 'to patient';
+    var pb = document.getElementById('phaseBadge');
+    pb.className = 'phase-pill phase-patient';
+    pb.innerText = 'To Patient';
+    document.getElementById('distSub').innerText = 'Navigating to patient';
     if (destinationMarker) destinationMarker.remove();
     var el = document.createElement('div');
     el.innerText = '📍';
     el.style.fontSize = '28px';
-    destinationMarker = new maplibregl.Marker({element: el})
-      .setLngLat([currentEmergency.patient_longitude, currentEmergency.patient_latitude])
-      .addTo(map);
+    destinationMarker = new maplibregl.Marker({element: el}).setLngLat([currentEmergency.patient_longitude, currentEmergency.patient_latitude]).addTo(map);
     map.flyTo({center: [currentEmergency.patient_longitude, currentEmergency.patient_latitude], zoom: 17});
     addPickupButton();
   }
 
   function addPickupButton() {
     if (document.getElementById('btnPickup')) return;
-    var bar = document.getElementById('bottombar');
+    var row = document.getElementById('btnRow');
     var btn = document.createElement('button');
     btn.className = 'btn btn-pickup';
     btn.id = 'btnPickup';
-    btn.innerText = 'Picked Up';
+    btn.innerText = '✓ Patient Picked Up';
     btn.onclick = patientPickedUp;
-    bar.appendChild(btn);
+    row.appendChild(btn);
   }
 
   function patientPickedUp() {
     phase = 'to_hospital';
     fetch('/emergencies/' + currentEmergency.emergency_id + '/picked-up', {method: 'POST'});
-    document.getElementById('phaseBadge').className = 'phase-badge phase-hospital';
-    document.getElementById('phaseBadge').innerText = 'TO HOSPITAL';
-    document.getElementById('distanceLabel').innerText = 'to ' + currentEmergency.hospital.name;
+    var pb = document.getElementById('phaseBadge');
+    pb.className = 'phase-pill phase-hospital';
+    pb.innerText = 'To Hospital';
+    document.getElementById('distSub').innerText = 'Navigating to ' + currentEmergency.hospital.name;
     var btn = document.getElementById('btnPickup');
     if (btn) btn.remove();
     if (destinationMarker) destinationMarker.remove();
     var el = document.createElement('div');
     el.innerText = '🏥';
     el.style.fontSize = '28px';
-    destinationMarker = new maplibregl.Marker({element: el})
-      .setLngLat([currentEmergency.hospital.longitude, currentEmergency.hospital.latitude])
-      .addTo(map);
+    destinationMarker = new maplibregl.Marker({element: el}).setLngLat([currentEmergency.hospital.longitude, currentEmergency.hospital.latitude]).addTo(map);
     map.flyTo({center: [currentEmergency.hospital.longitude, currentEmergency.hospital.latitude], zoom: 16});
   }
 
   function loadLights() {
     fetch('/traffic-lights').then(r => r.json()).then(function(lights) {
-      Object.keys(tlMarkers).forEach(function(id) { tlMarkers[id].remove(); });
+      Object.keys(tlMarkers).forEach(function(id) { if (map) tlMarkers[id].remove(); });
       tlMarkers = {};
-      var list = document.getElementById('tlList');
-      list.innerHTML = '';
+      var panelList = document.getElementById('panelTlList');
+      panelList.innerHTML = '';
       lights.forEach(function(tl) {
-        var el = document.createElement('div');
-        el.innerText = '🚦';
-        el.style.fontSize = '24px';
-        tlMarkers[tl.id] = new maplibregl.Marker({element: el})
-          .setLngLat([tl.longitude, tl.latitude])
-          .addTo(map);
+        if (map) {
+          var el = document.createElement('div');
+          el.innerText = '🚦';
+          el.style.fontSize = '22px';
+          tlMarkers[tl.id] = new maplibregl.Marker({element: el}).setLngLat([tl.longitude, tl.latitude]).addTo(map);
+        }
         var card = document.createElement('div');
-        card.className = 'tl-card';
+        card.className = 'panel-tl';
         var info = document.createElement('div');
-        info.className = 'tl-info';
-        info.innerHTML = '<div class="tl-name">' + tl.name + '</div><div class="tl-coords">' + tl.latitude.toFixed(5) + ', ' + tl.longitude.toFixed(5) + '</div>';
+        info.className = 'panel-tl-info';
+        info.innerHTML = '<div class="panel-tl-name">' + tl.name + '</div><div class="panel-tl-coords">' + tl.latitude.toFixed(5) + ', ' + tl.longitude.toFixed(5) + '</div>';
         var del = document.createElement('button');
-        del.className = 'tl-del';
-        del.innerText = 'X';
-        del.onclick = function() { deleteLight(tl.id); };
+        del.className = 'panel-tl-del';
+        del.innerText = 'Remove';
+        del.onclick = function() { fetch('/traffic-lights/' + tl.id, {method: 'DELETE'}).then(function() { loadLights(); }); };
         card.appendChild(info);
         card.appendChild(del);
-        list.appendChild(card);
+        panelList.appendChild(card);
       });
     });
-  }
-
-  function deleteLight(id) {
-    fetch('/traffic-lights/' + id, {method: 'DELETE'}).then(function() { loadLights(); });
   }
 
   function openPanel() { document.getElementById('panel').classList.add('open'); }
@@ -341,7 +434,7 @@
       if (!ambulanceMarker) {
         var el = document.createElement('div');
         el.innerText = '🚑';
-        el.style.fontSize = '28px';
+        el.style.cssText = 'font-size:28px;filter:drop-shadow(0 0 8px rgba(59,130,246,0.8));';
         ambulanceMarker = new maplibregl.Marker({element: el}).setLngLat(myPos).addTo(map);
       } else {
         ambulanceMarker.setLngLat(myPos);
@@ -359,11 +452,27 @@
         if (!data.traffic_lights) return;
         var nearest = data.traffic_lights.reduce(function(a, b) { return a.distance_meters < b.distance_meters ? a : b; });
         nearestTL = nearest;
-        document.getElementById('distanceDisplay').innerText = nearest.distance_meters + ' m';
+        document.getElementById('distNum').innerText = nearest.distance_meters;
+        document.getElementById('distStatus').innerText = nearest.name;
+
+        var cards = document.getElementById('tlCards');
+        cards.innerHTML = '';
+        data.traffic_lights.forEach(function(tl) {
+          var strip = document.createElement('div');
+          strip.className = 'tl-strip' + (tl.triggered ? ' triggered' : '');
+          strip.innerHTML = '<div class="tl-dot"></div><div class="tl-name">' + tl.name + '</div><div class="tl-dist">' + tl.distance_meters + ' m</div>';
+          cards.appendChild(strip);
+        });
+
         if (data.status === 'triggered' && !triggered) {
           triggered = true;
-          document.getElementById('triggerBadge').style.display = 'block';
-          setTimeout(function() { document.getElementById('triggerBadge').style.display = 'none'; triggered = false; }, 4000);
+          document.getElementById('triggerFlash').style.display = 'block';
+          document.getElementById('triggerBanner').style.display = 'block';
+          setTimeout(function() {
+            document.getElementById('triggerFlash').style.display = 'none';
+            document.getElementById('triggerBanner').style.display = 'none';
+            triggered = false;
+          }, 4000);
         }
       });
     }, 2000);
@@ -374,6 +483,8 @@
     if (sendInterval) clearInterval(sendInterval);
     document.getElementById('btnStart').disabled = false;
     document.getElementById('btnStop').disabled = true;
+    document.getElementById('distNum').innerText = '—';
+    document.getElementById('distStatus').innerText = 'Navigation stopped';
   }
 
   function forceTrigger() {
