@@ -104,7 +104,7 @@
     ws.onopen = function() {
       document.getElementById('connDot').classList.add('connected');
       document.getElementById('locationName').innerText = host;
-      setLight('connected');
+      setLight('clear');
     };
     ws.onmessage = function(e) {
       var data = JSON.parse(e.data);
