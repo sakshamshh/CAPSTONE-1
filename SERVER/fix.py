@@ -187,3 +187,12 @@ f = open('server.py', 'w', encoding='utf-8')
 f.write(content)
 f.close()
 print('done')
+
+f = open('SERVER/pages/trafficlight.html', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+lines[105] = lines[105].rstrip() + "\n      setLight('clear');\n"
+f = open('SERVER/pages/trafficlight.html', 'w', encoding='utf-8')
+f.writelines(lines)
+f.close()
+print('done')
