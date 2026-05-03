@@ -109,7 +109,7 @@
     ws.onmessage = function(e) {
       var data = JSON.parse(e.data);
       var s = data.status || 'clear';
-      setLight(s);
+if (s !== 'connected') setLight(s);
       if (data.traffic_lights) {
         var list = document.getElementById('tlList');
         list.innerHTML = '';
