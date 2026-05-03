@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Traffic Light</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: #060d1a; color: #e8eaf6; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+
+    #header { text-align: center; }
+    #header h1 { font-size: 18px; font-weight: 700; color: #60a5fa; }
+    #header p { font-size: 12px; color: #7b8fa6; margin-top: 4px; }
+
+    #housing { background: #0d0d0d; border-radius: 24px; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px; align-items: center; border: 3px solid #1a1a1a; box-shadow: 0 0 60px rgba(0,0,0,0.8); }
+
+    .light { width: 140px; height: 140px; border-radius: 50%; transition: all 0.4s ease; position: relative; }
+    .light::after { content: ''; position: absolute; top: 12px; left: 18px; width: 35px; height: 35px; background: rgba(255,255,255,0.15); border-radius: 50%; }
+
+    #red   { background: #1a0000; box-shadow: 0 0 8px #1a0000; }
+    #yellow { background: #1a1400; box-shadow: 0 0 8px #1a1400; }
+    #green { background: #001a00; box-shadow: 0 0 8px #001a00; }
+
+    .red-on    { background: #ff2020 !important; box-shadow: 0 0 60px #ff2020, 0 0 120px #ff000080 !important; }
+    .yellow-on { background: #ffcc00 !important; box-shadow: 0 0 60px #ffcc00, 0 0 120px #ffcc0080 !important; }
+    .green-on  { background: #00e040 !important; box-shadow: 0 0 60px #00e040, 0 0 120px #00e04080 !important; }
+
+    #infobox { text-align: center; }
+    #stateLine { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    #distLine { font-size: 13px; color: #7b8fa6; margin-top: 6px; }
+    #ambLine { font-size: 12px; color: #4a5f7a; margin-top: 4px; }
+
+    #connBox { display: flex; align-items: center; gap: 8px; background: #0a1628; border: 1px solid #1a2f4e; border-radius: 10px; padding: 8px 16px; }
+    #connBox input { background: transparent; border: none; color: #60a5fa; font-size: 13px; outline: none; width: 220px; }
+    #connDot { width: 8px; height: 8px; border-radius: 50%; background: #dc2626; flex-shrink: 0; }
+    #connDot.connected { background: #4ade80; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+    #btnRow { display: flex; gap: 10px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-connect { background: #2563eb; color: #fff; }
+    .btn-disconnect { background: #7f1d1d; color: #f87171; }
+
+    #tlList { width: 100%; max-width: 340px; }
+    .tl-row { background: #0d1b2e; border: 1px solid #1a2f4e; border-radius: 10px; padding: 10px 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .tl-row .tl-name { flex: 1; font-weight: 600; }
+    .tl-row .tl-dist { color: #7b8fa6; font-size: 12px; }
+    .tl-triggered { border-color: #dc2626; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🚦 Traffic Light Monitor</h1>
+  <p id="locationName">Connecting...</p>
+</div>
+
+<div id="housing">
+  <div class="light" id="red"></div>
+  <div class="light" id="yellow"></div>
+  <div class="light" id="green"></div>
+</div>
+
+<div id="infobox">
+  <div id="stateLine">WAITING</div>
+  <div id="distLine">No ambulance data</div>
+  <div id="ambLine"></div>
+</div>
+
+<div id="connBox">
+  <div id="connDot"></div>
+  <input id="serverInput" value="server-only-capstone.onrender.com" placeholder="server host"/>
+</div>
+
+<div id="btnRow">
+  <button class="btn btn-connect" onclick="connect()">Connect</button>
+  <button class="btn btn-disconnect" onclick="disconnect()">Disconnect</button>
+</div>
+
+<div id="tlList"></div>
+
+<script>
+  var ws = null;
+  var state = 'disconnected';
+
+  function setLight(s) {
+    document.getElementById('red').className = 'light';
+    document.getElementById('yellow').className = 'light';
+    document.getElementById('green').className = 'light';
+    if (s === 'triggered') {
+      document.getElementById('green').classList.add('green-on');
+      document.getElementById('stateLine').innerText = 'TRIGGERED — GO';
+      document.getElementById('stateLine').style.color = '#00e040';
+    } else if (s === 'clear') {
+      document.getElementById('red').classList.add('red-on');
+      document.getElementById('stateLine').innerText = 'CLEAR — STOP';
+      document.getElementById('stateLine').style.color = '#ff2020';
+    } else if (s === 'connected') {
+      document.getElementById('yellow').classList.add('yellow-on');
+      document.getElementById('stateLine').innerText = 'CONNECTED';
+      document.getElementById('stateLine').style.color = '#ffcc00';
+    } else {
+      document.getElementById('stateLine').innerText = 'DISCONNECTED';
+      document.getElementById('stateLine').style.color = '#7b8fa6';
+    }
+  }
+
+  function connect() {
+    var host = document.getElementById('serverInput').value.trim();
+    var url = host.includes('onrender.com') ? 'wss://' + host + '/ws/traffic-light' : 'ws://' + host + '/ws/traffic-light';
+    ws = new WebSocket(url);
+
+    ws.onopen = function() {
+      document.getElementById('connDot').classList.add('connected');
+      document.getElementById('locationName').innerText = host;
+      setLight('connected');
+    };
+
+    ws.onmessage = function(e) {
+      var data = JSON.parse(e.data);
+      var s = data.status || 'clear';
+      setLight(s);
+
+      if (data.traffic_lights) {
+        var list = document.getElementById('tlList');
+        list.innerHTML = '';
+        data.traffic_lights.forEach(function(tl) {
+          var row = document.createElement('div');
+          row.className = 'tl-row' + (tl.triggered ? ' tl-triggered' : '');
+          row.innerHTML = '<span class="tl-name">' + tl.name + '</span><span class="tl-dist">' + tl.distance_meters + ' m</span>';
+          list.appendChild(row);
+        });
+      }
+
+      if (data.ambulance) {
+        document.getElementById('distLine').innerText = 'Ambulance: ' + data.ambulance.id;
+        document.getElementById('ambLine').innerText = data.ambulance.latitude.toFixed(5) + ', ' + data.ambulance.longitude.toFixed(5);
+      }
+
+      if (data.distance_meters !== undefined) {
+        document.getElementById('distLine').innerText = data.distance_meters + ' m away';
+      }
+    };
+
+    ws.onclose = function() {
+      document.getElementById('connDot').classList.remove('connected');
+      setLight('disconnected');
+      document.getElementById('locationName').innerText = 'Disconnected';
+    };
+
+    ws.onerror = function() {
+      setLight('disconnected');
+    };
+  }
+
+  function disconnect() {
+    if (ws) ws.close();
+  }
+
+  connect();
+</script>
+</body>
+</html>

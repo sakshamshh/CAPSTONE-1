@@ -118,3 +118,20 @@ f = open('server.py', 'w', encoding='utf-8')
 f.write(content)
 f.close()
 print('done')
+
+f = open('server.py', 'r', encoding='utf-8')
+content = f.read()
+f.close()
+
+content += '''
+
+@app.get("/trafficlight")
+def trafficlight_page():
+    html_path = Path(__file__).resolve().parent / "trafficlight.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+'''
+
+f = open('server.py', 'w', encoding='utf-8')
+f.write(content)
+f.close()
+print('done')
