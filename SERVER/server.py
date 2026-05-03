@@ -280,7 +280,7 @@ def latest_ambulance():
 
 @app.get("/mobile")
 def mobile_sender():
-    html_path = Path(__file__).resolve().parent / "mobile_sender.html"
+    html_path = Path(__file__).resolve().parent / "pages" / "mobile_sender.html"
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
 
 
@@ -314,58 +314,12 @@ async def ambulance_ws(websocket: WebSocket, ambulance_id: str):
 
 @app.get("/navigate")
 def navigate_page():
-    html_path = Path(__file__).resolve().parent / "navigate.html"
+    html_path = Path(__file__).resolve().parent / "pages" / "navigate.html"
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
 
 
 def map_page():
-    html_path = Path(__file__).resolve().parent / "map.html"
-    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
-
-
-class RegisterModel(BaseModel):
-    driver_name: str
-    vehicle: Optional[str] = None
-
-
-@app.post("/register")
-def register_ambulance(data: RegisterModel):
-    new_id = "amb-" + str(uuid.uuid4())[:6]
-    new_amb = {"id": new_id, "driver_name": data.driver_name, "vehicle": data.vehicle, "status": "pending"}
-    supabase.table("ambulances").insert(new_amb).execute()
-    return new_amb
-
-
-@app.get("/ambulances/{amb_id}")
-def get_ambulance(amb_id: str):
-    result = supabase.table("ambulances").select("*").eq("id", amb_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Not found")
-    return result.data[0]
-
-
-@app.post("/ambulances/{amb_id}/approve")
-def approve_ambulance(amb_id: str):
-    supabase.table("ambulances").update({"status": "idle"}).eq("id", amb_id).execute()
-    return {"status": "approved"}
-
-
-@app.delete("/ambulances/{amb_id}")
-def delete_ambulance(amb_id: str):
-    supabase.table("ambulances").delete().eq("id", amb_id).execute()
-    return {"status": "deleted"}
-
-
-
-@app.get("/hq")
-def hq_page():
-    html_path = Path(__file__).resolve().parent / "hq.html"
-    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
-
-
-@app.get("/map")
-def map_page():
-    html_path = Path(__file__).resolve().parent / "map.html"
+    html_path = Path(__file__).resolve().parent / "pages" / "map.html"
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
 
 
@@ -405,5 +359,69 @@ def delete_ambulance(amb_id: str):
 
 @app.get("/trafficlight")
 def trafficlight_page():
-    html_path = Path(__file__).resolve().parent / "trafficlight.html"
+    html_path = Path(__file__).resolve().parent / "pages" / "trafficlight.html"
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+
+@app.get("/hq")
+def hq_page():
+    html_path = Path(__file__).resolve().parent / "pages" / "hq.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+
+@app.get("/map")
+def map_page():
+    html_path = Path(__file__).resolve().parent / "pages" / "map.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+
+class RegisterModel(BaseModel):
+    driver_name: str
+    vehicle: Optional[str] = None
+
+
+@app.post("/register")
+def register_ambulance(data: RegisterModel):
+    new_id = "amb-" + str(uuid.uuid4())[:6]
+    new_amb = {"id": new_id, "driver_name": data.driver_name, "vehicle": data.vehicle, "status": "pending"}
+    supabase.table("ambulances").insert(new_amb).execute()
+    return new_amb
+
+
+@app.get("/ambulances/{amb_id}")
+def get_ambulance(amb_id: str):
+    result = supabase.table("ambulances").select("*").eq("id", amb_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Not found")
+    return result.data[0]
+
+
+@app.post("/ambulances/{amb_id}/approve")
+def approve_ambulance(amb_id: str):
+    supabase.table("ambulances").update({"status": "idle"}).eq("id", amb_id).execute()
+    return {"status": "approved"}
+
+
+@app.delete("/ambulances/{amb_id}")
+def delete_ambulance(amb_id: str):
+    supabase.table("ambulances").delete().eq("id", amb_id).execute()
+    return {"status": "deleted"}
+
+
+
+@app.get("/trafficlight")
+def trafficlight_page():
+    html_path = Path(__file__).resolve().parent / "pages" / "trafficlight.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+
+@app.get("/hq2")
+def hq2_page():
+    html_path = Path(__file__).resolve().parent / "pages" / "v2" / "hq_v2.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+
+@app.delete("/emergencies/{emergency_id}")
+def delete_emergency(emergency_id: str):
+    supabase.table("emergencies").delete().eq("id", emergency_id).execute()
+    return {"status": "deleted"}

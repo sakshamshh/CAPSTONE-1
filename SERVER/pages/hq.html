@@ -247,7 +247,18 @@
       if (patientMarker) { patientMarker.remove(); patientMarker = null; }
       document.getElementById('patientInfo').innerText = 'No patient location pinned';
       loadAll();
+    })
+function clearAmbs() {
+  if (!confirm('Delete all ambulances?')) return;
+  fetch('/ambulances').then(r => r.json()).then(function(ambs) {
+    Promise.all(ambs.map(function(a) {
+      return fetch('/ambulances/' + a.id, {method: 'DELETE'});
+    })).then(function() {
+      toast('All ambulances cleared');
+      loadAll();
     });
+  });
+};
   }
 
   var ws = new WebSocket('wss://' + location.host + '/ws/traffic-light');
