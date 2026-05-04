@@ -363,6 +363,18 @@ def trafficlight_page():
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
 
 
+@app.get("/hq2")
+def hq2_page():
+    html_path = Path(__file__).resolve().parent / "pages" / "v2" / "hq_v2.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), media_type="text/html")
+
+
+@app.delete("/emergencies/{emergency_id}")
+def delete_emergency(emergency_id: str):
+    supabase.table("emergencies").delete().eq("id", emergency_id).execute()
+    return {"status": "deleted"}
+
+
 @app.get("/hq")
 def hq_page():
     html_path = Path(__file__).resolve().parent / "pages" / "hq.html"

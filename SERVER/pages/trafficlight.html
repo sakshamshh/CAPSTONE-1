@@ -1,132 +1,293 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Traffic Light</title>
+  <title>Traffic Light Control</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
+    :root {
+      --bg: #080c14;
+      --surface: rgba(13,19,33,0.9);
+      --border: rgba(255,255,255,0.06);
+      --text: #f8fafc;
+      --muted: #475569;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body { background: #060d1a; color: #e8eaf6; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
-    #header { text-align: center; }
-    #header h1 { font-size: 18px; font-weight: 700; color: #60a5fa; }
-    #header p { font-size: 12px; color: #7b8fa6; margin-top: 4px; }
-    #housing { background: #0d0d0d; border-radius: 24px; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px; align-items: center; border: 3px solid #1a1a1a; box-shadow: 0 0 60px rgba(0,0,0,0.8); }
-    .light { width: 140px; height: 140px; border-radius: 50%; transition: all 0.4s ease; position: relative; }
-    .light::after { content: ''; position: absolute; top: 12px; left: 18px; width: 35px; height: 35px; background: rgba(255,255,255,0.15); border-radius: 50%; }
-    #red { background: #1a0000; box-shadow: 0 0 8px #1a0000; }
-    #yellow { background: #1a1400; box-shadow: 0 0 8px #1a1400; }
-    #green { background: #001a00; box-shadow: 0 0 8px #001a00; }
-    .red-on { background: #ff2020 !important; box-shadow: 0 0 60px #ff2020, 0 0 120px #ff000080 !important; }
-    .yellow-on { background: #ffcc00 !important; box-shadow: 0 0 60px #ffcc00, 0 0 120px #ffcc0080 !important; }
-    .green-on { background: #00e040 !important; box-shadow: 0 0 60px #00e040, 0 0 120px #00e04080 !important; }
-    #infobox { text-align: center; }
-    #stateLine { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 1px; }
-    #distLine { font-size: 13px; color: #7b8fa6; margin-top: 6px; }
-    #ambLine { font-size: 12px; color: #4a5f7a; margin-top: 4px; }
-    #connBox { display: flex; align-items: center; gap: 8px; background: #0a1628; border: 1px solid #1a2f4e; border-radius: 10px; padding: 8px 16px; }
-    #connBox input { background: transparent; border: none; color: #60a5fa; font-size: 13px; outline: none; width: 220px; }
-    #connDot { width: 8px; height: 8px; border-radius: 50%; background: #dc2626; flex-shrink: 0; }
-    #connDot.connected { background: #4ade80; animation: pulse 2s infinite; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 24px;
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.08) 0%, transparent 60%);
+    }
+
+    /* HEADER */
+    .header { text-align: center; }
+    .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* CONN ROW */
+    .conn-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 16px; backdrop-filter: blur(20px); }
+    .conn-row input { background: transparent; border: none; color: #60a5fa; font-size: 13px; outline: none; width: 260px; font-family: inherit; }
+    .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; transition: background 0.3s; }
+    .conn-dot.on { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-    #btnRow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-connect { background: #2563eb; color: #fff; }
-    .btn-disconnect { background: #7f1d1d; color: #f87171; }
-    .btn-force { background: #78350f; color: #fbbf24; border: 1px solid #78350f; }
-    #tlList { width: 100%; max-width: 340px; }
-    .tl-row { background: #0d1b2e; border: 1px solid #1a2f4e; border-radius: 10px; padding: 10px 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
-    .tl-row .tl-name { flex: 1; font-weight: 600; }
-    .tl-row .tl-dist { color: #7b8fa6; font-size: 12px; }
-    .tl-triggered { border-color: #dc2626; }
+    .conn-btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; }
+    .btn-conn { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+    .btn-disconn { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+    /* HOUSING */
+    .housing {
+      background: #060a12;
+      border: 3px solid #0f172a;
+      border-radius: 32px;
+      padding: 28px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+      box-shadow: 0 0 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.03);
+      position: relative;
+    }
+    .housing::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: 50%; transform: translateX(-50%);
+      width: 40%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    }
+
+    .light {
+      width: 130px; height: 130px; border-radius: 50%;
+      transition: all 0.35s ease;
+      position: relative; cursor: pointer;
+    }
+    .light::after {
+      content: ''; position: absolute;
+      top: 14px; left: 20px;
+      width: 30px; height: 30px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 50%;
+    }
+
+    #red    { background: #1a0000; box-shadow: 0 0 6px #1a0000; }
+    #yellow { background: #1a1200; box-shadow: 0 0 6px #1a1200; }
+    #green  { background: #001a00; box-shadow: 0 0 6px #001a00; }
+
+    .red-on    { background: #ff1f1f !important; box-shadow: 0 0 50px #ff1f1f, 0 0 100px rgba(255,31,31,0.4) !important; }
+    .yellow-on { background: #ffcc00 !important; box-shadow: 0 0 50px #ffcc00, 0 0 100px rgba(255,204,0,0.4) !important; }
+    .green-on  { background: #00e040 !important; box-shadow: 0 0 50px #00e040, 0 0 100px rgba(0,224,64,0.4) !important; }
+
+    /* STATUS */
+    .status-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px 24px; text-align: center;
+      backdrop-filter: blur(20px); min-width: 280px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    #stateLine { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+    #distLine  { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    #ambLine   { font-size: 11px; color: #334155; margin-top: 4px; }
+
+    /* TL LIST */
+    #tlList { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 6px; }
+    .tl-row {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 14px;
+      display: flex; align-items: center; gap: 10px;
+      backdrop-filter: blur(12px);
+      transition: border-color 0.3s;
+    }
+    .tl-row.triggered { border-color: rgba(0,224,64,0.3); background: rgba(0,224,64,0.05); }
+    .tl-ind { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; transition: all 0.3s; }
+    .tl-row.triggered .tl-ind { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .tl-name { flex: 1; font-size: 12px; font-weight: 500; color: #94a3b8; }
+    .tl-dist { font-size: 11px; color: var(--muted); }
+
+    /* CONTROLS */
+    .controls { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; }
+    .controls-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+    .ctrl-row { display: flex; gap: 8px; }
+    .ctrl-btn {
+      flex: 1; padding: 13px 8px;
+      border: 1px solid var(--border); border-radius: 14px;
+      background: var(--surface); backdrop-filter: blur(16px);
+      color: var(--text); font-size: 11px; font-weight: 700;
+      font-family: inherit; letter-spacing: 0.5px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.15s;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .ctrl-btn:hover { transform: translateY(-1px); }
+    .ctrl-btn:active { transform: scale(0.96); }
+    .ctrl-btn .icon { display: flex; align-items: center; justify-content: center; }
+
+    .btn-red    { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.08); color: #f87171; }
+    .btn-red:hover { background: rgba(239,68,68,0.16); border-color: rgba(239,68,68,0.4); box-shadow: 0 0 20px rgba(239,68,68,0.15); }
+    .btn-yellow { border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.08); color: #fbbf24; }
+    .btn-yellow:hover { background: rgba(245,158,11,0.16); border-color: rgba(245,158,11,0.4); box-shadow: 0 0 20px rgba(245,158,11,0.15); }
+    .btn-green  { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.08); color: #34d399; }
+    .btn-green:hover { background: rgba(16,185,129,0.16); border-color: rgba(16,185,129,0.4); box-shadow: 0 0 20px rgba(16,185,129,0.15); }
+    .btn-reset  { border-color: rgba(99,102,241,0.25); background: rgba(99,102,241,0.08); color: #a5b4fc; }
+    .btn-reset:hover { background: rgba(99,102,241,0.16); border-color: rgba(99,102,241,0.4); }
+    .btn-auto   { border-color: rgba(59,130,246,0.25); background: rgba(59,130,246,0.08); color: #60a5fa; }
+    .btn-auto:hover { background: rgba(59,130,246,0.16); border-color: rgba(59,130,246,0.4); }
+    .btn-off    { border-color: rgba(71,85,105,0.25); background: rgba(71,85,105,0.08); color: #64748b; }
+
+    .mode-badge {
+      font-size: 11px; font-weight: 600; padding: 4px 12px;
+      border-radius: 20px; text-align: center;
+    }
+    .mode-auto { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+    .mode-manual { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
   </style>
 </head>
 <body>
 
-<div id="header">
-  <h1>Traffic Light Monitor</h1>
-  <p id="locationName">Connecting...</p>
+<div class="header">
+  <h1>🚦 Traffic Light Control</h1>
+  <p id="locationName">Not connected</p>
 </div>
 
-<div id="housing">
-  <div class="light" id="red"></div>
-  <div class="light" id="yellow"></div>
-  <div class="light" id="green"></div>
+<div class="conn-row">
+  <div class="conn-dot" id="connDot"></div>
+  <input id="serverInput" value="server-only-capstone.onrender.com" />
+  <button class="conn-btn btn-conn" onclick="connect()">Connect</button>
+  <button class="conn-btn btn-disconn" onclick="disconnect()">Disconnect</button>
 </div>
 
-<div id="infobox">
-  <div id="stateLine">WAITING</div>
+<div class="housing">
+  <div class="light" id="red"    onclick="override('clear')"></div>
+  <div class="light" id="yellow" onclick="override('warning')"></div>
+  <div class="light" id="green"  onclick="override('triggered')"></div>
+</div>
+
+<div class="status-card">
+  <div id="stateLine" style="color:#64748b">WAITING</div>
   <div id="distLine">No ambulance data</div>
   <div id="ambLine"></div>
 </div>
 
-<div id="connBox">
-  <div id="connDot"></div>
-  <input id="serverInput" value="server-only-capstone.onrender.com" placeholder="server host"/>
-</div>
-
-<div id="btnRow">
-  <button class="btn btn-connect" onclick="connect()">Connect</button>
-  <button class="btn btn-disconnect" onclick="disconnect()">Disconnect</button>
-  <button class="btn btn-force" onclick="forceTrigger()">Force Trigger</button>
-</div>
-
 <div id="tlList"></div>
 
+<div class="controls">
+  <div class="controls-title">Manual Override</div>
+  <div style="display:flex;justify-content:center;">
+    <div class="mode-badge mode-auto" id="modeBadge">AUTO MODE</div>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn btn-red"    onclick="override('clear')">
+      <div class="icon"><i data-lucide="circle-stop" style="width:18px;height:18px;"></i></div>
+      Red
+    </button>
+    <button class="ctrl-btn btn-yellow" onclick="override('warning')">
+      <div class="icon"><i data-lucide="triangle-alert" style="width:18px;height:18px;"></i></div>
+      Yellow
+    </button>
+    <button class="ctrl-btn btn-green"  onclick="override('triggered')">
+      <div class="icon"><i data-lucide="circle-check" style="width:18px;height:18px;"></i></div>
+      Green
+    </button>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn btn-reset"  onclick="override('clear')">
+      <div class="icon"><i data-lucide="rotate-ccw" style="width:18px;height:18px;"></i></div>
+      Reset
+    </button>
+    <button class="ctrl-btn btn-off"    onclick="override('disconnected')">
+      <div class="icon"><i data-lucide="power-off" style="width:18px;height:18px;"></i></div>
+      All Off
+    </button>
+    <button class="ctrl-btn btn-auto"   onclick="setAuto()">
+      <div class="icon"><i data-lucide="cpu" style="width:18px;height:18px;"></i></div>
+      Auto
+    </button>
+  </div>
+</div>
+
 <script>
+  lucide.createIcons();
   var ws = null;
+  var autoMode = true;
+  var serverBase = 'https://server-only-capstone.onrender.com';
 
   function setLight(s) {
-    document.getElementById('red').className = 'light';
+    document.getElementById('red').className    = 'light';
     document.getElementById('yellow').className = 'light';
-    document.getElementById('green').className = 'light';
+    document.getElementById('green').className  = 'light';
+
+    var line = document.getElementById('stateLine');
     if (s === 'triggered') {
       document.getElementById('green').classList.add('green-on');
-      document.getElementById('stateLine').innerText = 'TRIGGERED — GO';
-      document.getElementById('stateLine').style.color = '#00e040';
+      line.innerText = 'TRIGGERED — GO'; line.style.color = '#00e040';
     } else if (s === 'clear') {
       document.getElementById('red').classList.add('red-on');
-      document.getElementById('stateLine').innerText = 'CLEAR — STOP';
-      document.getElementById('stateLine').style.color = '#ff2020';
-    } else if (s === 'connected') {
+      line.innerText = 'CLEAR — STOP'; line.style.color = '#ff1f1f';
+    } else if (s === 'warning') {
       document.getElementById('yellow').classList.add('yellow-on');
-      document.getElementById('stateLine').innerText = 'CONNECTED';
-      document.getElementById('stateLine').style.color = '#ffcc00';
+      line.innerText = 'WARNING'; line.style.color = '#ffcc00';
+    } else if (s === 'connected') {
+      document.getElementById('red').classList.add('red-on');
+      line.innerText = 'CONNECTED'; line.style.color = '#60a5fa';
     } else {
-      document.getElementById('stateLine').innerText = 'DISCONNECTED';
-      document.getElementById('stateLine').style.color = '#7b8fa6';
+      line.innerText = 'DISCONNECTED'; line.style.color = '#475569';
     }
+  }
+
+  function override(status) {
+    autoMode = false;
+    document.getElementById('modeBadge').className = 'mode-badge mode-manual';
+    document.getElementById('modeBadge').innerText = 'MANUAL OVERRIDE';
+    var host = document.getElementById('serverInput').value.trim();
+    var base = host.includes('onrender.com') ? 'https://' + host : 'http://' + host;
+    fetch(base + '/override', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status: status})
+    });
+    setLight(status);
+  }
+
+  function setAuto() {
+    autoMode = true;
+    document.getElementById('modeBadge').className = 'mode-badge mode-auto';
+    document.getElementById('modeBadge').innerText = 'AUTO MODE';
   }
 
   function connect() {
     var host = document.getElementById('serverInput').value.trim();
+    serverBase = host.includes('onrender.com') ? 'https://' + host : 'http://' + host;
     var url = host.includes('onrender.com') ? 'wss://' + host + '/ws/traffic-light' : 'ws://' + host + '/ws/traffic-light';
     ws = new WebSocket(url);
+
     ws.onopen = function() {
-      document.getElementById('connDot').classList.add('connected');
+      document.getElementById('connDot').classList.add('on');
       document.getElementById('locationName').innerText = host;
       setLight('clear');
     };
+
     ws.onmessage = function(e) {
       var data = JSON.parse(e.data);
+      if (!autoMode && !data.override) return;
       var s = data.status || 'clear';
-if (s !== 'connected') setLight(s);
-      if (data.traffic_lights) {
+      if (s === 'connected') { setLight('clear'); return; }
+      setLight(s);
+
+      if (data.traffic_lights && data.traffic_lights.length) {
         var list = document.getElementById('tlList');
         list.innerHTML = '';
         data.traffic_lights.forEach(function(tl) {
           var row = document.createElement('div');
-          row.className = 'tl-row' + (tl.triggered ? ' tl-triggered' : '');
-          row.innerHTML = '<span class="tl-name">' + tl.name + '</span><span class="tl-dist">' + tl.distance_meters + ' m</span>';
+          row.className = 'tl-row' + (tl.triggered ? ' triggered' : '');
+          row.innerHTML = '<div class="tl-ind"></div><div class="tl-name">' + tl.name + '</div><div class="tl-dist">' + tl.distance_meters + ' m</div>';
           list.appendChild(row);
         });
       }
+
       if (data.ambulance) {
-        document.getElementById('distLine').innerText = 'Ambulance: ' + data.ambulance.id;
+        document.getElementById('distLine').innerText = 'Ambulance ' + data.ambulance.id;
         document.getElementById('ambLine').innerText = data.ambulance.latitude.toFixed(5) + ', ' + data.ambulance.longitude.toFixed(5);
       }
     };
+
     ws.onclose = function() {
-      document.getElementById('connDot').classList.remove('connected');
+      document.getElementById('connDot').classList.remove('on');
       setLight('disconnected');
       document.getElementById('locationName').innerText = 'Disconnected';
     };
@@ -134,20 +295,6 @@ if (s !== 'connected') setLight(s);
 
   function disconnect() {
     if (ws) ws.close();
-  }
-
-  function forceTrigger() {
-    var host = document.getElementById('serverInput').value.trim();
-    var base = host.includes('onrender.com') ? 'https://' + host : 'http://' + host;
-    fetch(base + '/traffic-lights').then(r => r.json()).then(function(lights) {
-      if (!lights.length) return;
-      var tl = lights[0];
-      fetch(base + '/ambulance', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({latitude: tl.latitude, longitude: tl.longitude, id: 'force-trigger'})
-      });
-    });
   }
 
   connect();
