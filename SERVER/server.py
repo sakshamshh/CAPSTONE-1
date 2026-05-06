@@ -437,3 +437,13 @@ def hq2_page():
 def delete_emergency(emergency_id: str):
     supabase.table("emergencies").delete().eq("id", emergency_id).execute()
     return {"status": "deleted"}
+
+
+class OverrideModel(BaseModel):
+    status: str
+
+@app.post("/override")
+async def override_light(data: OverrideModel):
+    message = {"status": data.status, "override": True, "traffic_lights": [], "ambulance": None}
+    await manager.broadcast(message)
+    return {"status": data.status}
